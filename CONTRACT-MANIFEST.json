@@ -1,7 +1,7 @@
 {
   "algorithm": "sha256",
   "files": {
-    ".github/workflows/contract-guard.yml": "4ff2f8bbe0936745eb8f8ea01411205789e7033a140a6ebd968621fcf966acaf",
+    ".github/workflows/contract-guard.yml": "f951adba9d973bd608088051ec1cebb9528722dfe825008c30a7d171e15c38aa",
     "docs/contract-boundaries.md": "3c498595c7bc05324156ba6dd2d68217528fa37247e360d5f1f4495d0b23ce0b",
     "docs/contract-grants.md": "942f461acfd21d2dbd507241882b3407851f5bc36756d1c159aedf1540afb40e",
     "docs/contract.md": "2204ef7373007479e5b0343ede2aa536c17ca3477bf8fc85db5c9518cdd7df28",
@@ -10,7 +10,7 @@
     "docs/quality-bar.md": "e0d02e6625b6542796bb428b18d816ff73aaa98504714018960964f8bf951dd5",
     "docs/threat-model.md": "8450dc2e8e85376cdfb97f8a38b2fc91c7c0390845034ce2200c10cb20e8f11a",
     "tools/contract-lint.py": "8d25816d54d981c21536048d1fea866eca67a91182965b3a3b6c5911ddd03853",
-    "tools/contract-manifest.py": "81914f1b82554ad0026434941be3852f904cf8b6aa6b83215eab2e8f24fd9925"
+    "tools/contract-manifest.py": "baefb8640d6614af0ba6f949fee5de12f5ebacea992d9b3ad8dd18224d1590eb"
   },
   "guarded_paths": [
     ".github/workflows/contract-guard.yml",

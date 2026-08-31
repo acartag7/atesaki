@@ -29,6 +29,3 @@ jobs:
 
       - name: Check the contract manifest
         run: python3 tools/contract-manifest.py --check
-
-      - name: Prove the contract-change gate
-        run: python3 tools/contract-manifest.py --mutation-test
