@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://atesaki.dev/schema/config.json",
+  "title": "atesaki gateway configuration",
+  "description": "Seed schema for `atesaki validate`. Enforces the invariants that fail closed: per-path audiences, secret-refs (never inline secrets), non-wildcard redirect allowlist, explicit egress. Intentionally strict.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["server", "authorizationServer", "routes"],
+  "properties": {
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["externalBaseUrl"],
+      "properties": {
+        "bind": { "type": "string", "default": "0.0.0.0" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 8080 },
+        "externalBaseUrl": { "$ref": "#/$defs/httpsUrl" },
+        "trustProxyHeaders": { "type": "boolean", "default": false },
+        "state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["store"],
+          "properties": {
+            "store": { "enum": ["memory", "redis", "postgres"] },
+            "dsn": { "type": "string" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "store": { "const": "memory" } } },
+              "then": { "description": "memory store is single-replica and loses state on restart; validators SHOULD warn." }
+            },
+            {
+              "if": { "properties": { "store": { "enum": ["redis", "postgres"] } } },
+              "then": { "required": ["dsn"] }
+            }
+          ]
+        },
+        "audit": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sink": { "enum": ["none", "stdout", "file", "otlp"], "default": "none" },
+            "failOpen": { "type": "boolean", "default": true }
+          }
+        },
+        "logging": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "level": { "enum": ["debug", "info", "warn", "error"], "default": "info" },
+            "redactSecrets": { "type": "boolean", "default": true },
+            "includeErrorCause": { "type": "boolean", "default": true }
+          }
+        },
+        "health": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "livePath": { "type": "string", "pattern": "^/", "default": "/healthz" },
+            "readyPath": { "type": "string", "pattern": "^/", "default": "/readyz" },
+            "deepReadiness": { "type": "boolean", "default": true }
+          }
+        }
+      }
+    },
+
+    "egress": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "proxyUrl"],
+            "properties": {
+              "name": { "type": "string" },
+              "proxyUrl": {
+                "description": "http(s) proxy URL, or the literal \"none\" for direct.",
+                "anyOf": [{ "const": "none" }, { "type": "string", "format": "uri" }]
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "authorizationServer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issuer", "signing", "dcr", "identityProviders"],
+      "properties": {
+        "issuer": { "$ref": "#/$defs/httpsUrl" },
+        "signing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["activeKid", "keys"],
+          "properties": {
+            "activeKid": { "type": "string" },
+            "keys": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kid", "jwkRef"],
+                "properties": {
+                  "kid": { "type": "string" },
+                  "jwkRef": { "$ref": "#/$defs/secretRef" }
+                }
+              }
+            }
+          }
+        },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "accessTokenTtl": { "$ref": "#/$defs/duration" },
+            "refreshTokenTtl": { "$ref": "#/$defs/duration" },
+            "consentTtl": { "$ref": "#/$defs/duration" },
+            "authorizationCodeTtl": { "$ref": "#/$defs/duration" }
+          }
+        },
+        "dcr": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "redirectAllowlist"],
+          "properties": {
+            "mode": { "enum": ["stateless", "stored"] },
+            "redirectAllowlist": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "not": { "const": "*" },
+                "description": "Exact redirect URIs/origins. Wildcards are rejected."
+              }
+            }
+          }
+        },
+        "identityProviders": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/identityProvider" }
+        }
+      }
+    },
+
+    "routes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/route" }
+    }
+  },
+
+  "$defs": {
+    "httpsUrl": {
+      "type": "string",
+      "pattern": "^https://",
+      "description": "Must be https (loopback http allowed only in an explicit dev mode not modeled here)."
+    },
+    "duration": {
+      "type": "string",
+      "pattern": "^[0-9]+(ms|s|m|h|d)$",
+      "description": "e.g. 600s, 30d, 5m."
+    },
+    "secretRef": {
+      "type": "string",
+      "pattern": "^(env|file|k8s|vault|redis):",
+      "description": "Pointer to a secret. Inline secret material is forbidden by schema."
+    },
+    "identityProvider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "clientId", "clientSecretRef", "redirectPath"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "enum": ["oidc"] },
+        "discovery": { "type": "string", "format": "uri" },
+        "clientId": { "type": "string" },
+        "clientSecretRef": { "$ref": "#/$defs/secretRef" },
+        "redirectPath": { "type": "string", "pattern": "^/" },
+        "allowedTenantIds": { "type": "array", "items": { "type": "string" } },
+        "egress": { "type": "string", "description": "name of an egress profile" },
+        "tls": { "$ref": "#/$defs/tls" }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "resource", "upstream", "credential", "identity", "scopes"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^/" },
+        "mcpEndpoint": { "type": "string", "pattern": "^/", "default": "/mcp" },
+        "resource": {
+          "$ref": "#/$defs/httpsUrl",
+          "description": "Per-path audience. Validators MUST reject duplicate `resource` values across routes."
+        },
+        "upstream": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["url"],
+          "properties": {
+            "url": { "type": "string", "format": "uri" },
+            "egress": { "type": "string" },
+            "tls": { "$ref": "#/$defs/tls" },
+            "forwardHeaders": { "type": "array", "items": { "type": "string" } },
+            "timeouts": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "connect": { "$ref": "#/$defs/duration" },
+                "idle": {
+                  "anyOf": [{ "const": "none" }, { "$ref": "#/$defs/duration" }],
+                  "description": "\"none\" keeps long-lived SSE streams alive."
+                }
+              }
+            }
+          }
+        },
+        "credential": { "$ref": "#/$defs/credential" },
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "mode"],
+          "properties": {
+            "provider": { "type": "string" },
+            "mode": { "enum": ["redirect", "header", "dev-static"] }
+          }
+        },
+        "scopes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["catalog", "required"],
+          "properties": {
+            "catalog": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+            "default": { "type": "array", "items": { "type": "string" } },
+            "required": { "type": "string" }
+          }
+        },
+        "authorization": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "toolPolicy": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["default"],
+              "properties": {
+                "default": { "enum": ["allow", "deny"] },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "whenScopes": { "type": "array", "items": { "type": "string" } },
+                      "allowTools": { "type": "array", "items": { "type": "string" } },
+                      "denyTools": { "type": "array", "items": { "type": "string" } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "inbound": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowedHosts": { "type": "array", "items": { "type": "string" } },
+            "allowedOrigins": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "credential": {
+      "type": "object",
+      "required": ["type"],
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "required": ["type", "header", "valueRef"],
+          "properties": {
+            "type": { "const": "static-header" },
+            "header": { "type": "string" },
+            "scheme": { "type": "string" },
+            "valueRef": { "$ref": "#/$defs/secretRef" }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": ["type", "tokenEndpoint", "audience"],
+          "properties": {
+            "type": { "const": "token-exchange" },
+            "tokenEndpoint": { "type": "string", "format": "uri" },
+            "audience": { "type": "string" },
+            "subjectTokenFrom": { "enum": ["id_token", "access_token"], "default": "id_token" },
+            "egress": { "type": "string" }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": ["type", "lookup"],
+          "properties": {
+            "type": { "const": "per-identity" },
+            "lookup": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["store", "keyTemplate"],
+              "properties": {
+                "store": { "type": "string" },
+                "keyTemplate": { "type": "string", "description": "e.g. splunk/{subject}" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "tls": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "caBundle": { "enum": ["system"] },
+        "caBundleRef": { "$ref": "#/$defs/secretRef" },
+        "clientCertRef": { "$ref": "#/$defs/secretRef" },
+        "insecureSkipVerify": { "type": "boolean", "default": false }
+      }
+    }
+  }
+}

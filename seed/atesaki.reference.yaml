@@ -1,0 +1,185 @@
+# atesaki — annotated reference configuration
+# ---------------------------------------------------------------------------
+# One host, one Authorization Server, N routes. Each route is an MCP resource
+# with its own upstream, its own injected credential, and — critically — its own
+# audience. The token's `aud` is the security boundary between paths.
+#
+# Every field below carries a comment naming the failure mode it exists to
+# prevent. Secrets are ALWAYS `*Ref` pointers (env:, file:, k8s:, vault:) — never
+# inline, never in argv, never logged.
+
+# ── server ────────────────────────────────────────────────────────────────
+server:
+  bind: 0.0.0.0                 # containerized default. 127.0.0.1 makes the pod
+                                # unreachable behind an ip-target LB. Fail obvious.
+  port: 8080
+  # How clients actually reach the gateway (TLS terminates at the LB/ingress).
+  # Issuer + all metadata URLs derive from this, NOT from the request Host, so a
+  # spoofed Host can't rewrite discovery. TLS inside the pod is optional.
+  externalBaseUrl: https://gw.example.com
+  trustProxyHeaders: true       # honor X-Forwarded-Proto/Host from a known LB only
+
+  state:
+    # OAuth *ceremony* state only (codes, consent JTIs, refresh tokens, DCR
+    # clients). Access tokens are stateless JWTs — no store lookup on the hot path.
+    store: redis                # memory | redis | postgres
+    dsn: redis:default       # `memory` in multi-replica => re-auth loop on any
+                                # restart AND cross-replica misses. Warn loudly.
+
+  audit:
+    sink: stdout                # none | stdout | file | otlp
+    # Best-effort and OUT of the authorize hot path. A failing audit sink must
+    # never fail a request — but it MUST emit a loud error/metric, never nothing.
+    failOpen: true
+
+  logging:
+    level: info
+    redactSecrets: true         # redaction by construction, applied to every sink
+    includeErrorCause: true     # walk error.cause; surface ECONNREFUSED/ENOTFOUND/
+                                # cert errors instead of a bare "fetch failed".
+
+  health:
+    livePath: /healthz          # liveness: am I up
+    readyPath: /readyz          # readiness: can I actually serve
+    deepReadiness: true         # probe IdP JWKS + each upstream + store writable +
+                                # signing key loaded. A shallow 200 masked a fully
+                                # broken upstream for an entire debugging session.
+    # Let operators match the orchestrator's expected path; a /healthz vs /health
+    # mismatch silently flaps LB target groups into 502.
+
+# ── egress profiles ─────────────────────────────────────────────────────────
+# Named, referenced by IdPs and upstreams. Node's fetch does NOT honor
+# HTTP(S)_PROXY from the environment — proxy selection must be explicit per
+# destination. In enterprise nets the IdP and the upstream take different paths.
+egress:
+  profiles:
+    - name: corp-proxy
+      proxyUrl: http://outappl.example.com:3128
+    - name: direct
+      proxyUrl: none            # on-prem upstreams are reached directly
+
+# ── authorization server (shared across all routes) ─────────────────────────
+authorizationServer:
+  issuer: https://gw.example.com          # usually == externalBaseUrl
+  signing:
+    activeKid: k1
+    keys:
+      - kid: k1
+        jwkRef: file:/etc/atesaki/keys/k1.jwk   # ES256 private JWK
+    # keep prior kid(s) verifiable during rotation
+  tokens:
+    accessTokenTtl: 600s
+    refreshTokenTtl: 30d
+    consentTtl: 300s
+    authorizationCodeTtl: 300s
+  dcr:
+    mode: stateless             # stateless | stored
+    redirectAllowlist:          # exact origins/URLs. NEVER "*".
+      - https://claude.ai/api/mcp/auth_callback
+      - http://127.0.0.1:33418
+      - http://localhost:3118/callback
+
+  # Reusable IdP definitions referenced by routes. Multiple routes can share one.
+  identityProviders:
+    - name: entra-corp
+      type: oidc
+      discovery: https://login.microsoftonline.com/TENANT/v2.0/.well-known/openid-configuration
+      clientId: 00000000-0000-0000-0000-000000000000
+      clientSecretRef: k8s:atesaki-secrets/ENTRA_CLIENT_SECRET
+      redirectPath: /signin-oidc           # must be registered on the IdP app
+      allowedTenantIds: [ TENANT ]         # defense-in-depth on `tid`
+      egress: corp-proxy                   # IdP is on the internet -> via proxy.
+                                           # This is the call that hangs first if
+                                           # proxy egress isn't wired.
+      tls: { caBundle: system }
+
+# ── routes ──────────────────────────────────────────────────────────────────
+routes:
+  - path: /splunk                          # MCP served at /splunk/mcp
+    mcpEndpoint: /mcp
+    # THE AUDIENCE. Must be unique per path. A token minted for /splunk must be
+    # rejected at /conduktor — otherwise multi-path is a lateral-movement hole.
+    resource: https://gw.example.com/splunk/mcp
+
+    upstream:
+      url: https://vspl42.example.com:8089/services/mcp   # host+path are trusted
+                                           # config only; the inbound request never
+                                           # chooses the upstream (SSRF guard).
+      egress: direct
+      tls:
+        caBundleRef: file:/etc/atesaki/ca/post-device-ca.pem   # internal CA,
+                                           # scoped to THIS upstream — not a global
+                                           # NODE_EXTRA_CA_CERTS that widens trust.
+        # insecureSkipVerify: false        # dev only; log a loud warning if true
+      # Allowlist of headers forwarded upstream (fail closed). A new client header
+      # defaults to dropped, not leaked.
+      forwardHeaders: [accept, content-type, mcp-protocol-version, mcp-session-id, last-event-id]
+      timeouts:
+        connect: 5s
+        idle: none                         # none => never sever a long-lived SSE
+                                           # stream with a timer; client conn is the
+                                           # bound. Cancellation is via response
+                                           # socket close, NOT request-stream close
+                                           # (buffered POST closes that in ~1ms).
+
+    # How the gateway authenticates to the upstream. Three strategies:
+    credential:
+      type: static-header                  # static-header | token-exchange | per-identity
+      header: Authorization
+      scheme: Bearer
+      valueRef: k8s:atesaki-secrets/SPLUNK_API_KEY
+      # --- type: token-exchange (RFC 8693) — backend sees WHO, not a shared acct:
+      # tokenEndpoint: https://.../token
+      # audience: splunk-prod
+      # subjectTokenFrom: id_token
+      # --- type: per-identity — look up a per-user secret:
+      # lookup: { store: vault, keyTemplate: "splunk/{subject}" }
+
+    identity:
+      provider: entra-corp
+      mode: redirect                       # redirect | header | dev-static
+
+    scopes:
+      catalog: [splunk:read, splunk:admin]
+      default: [splunk:read]
+      required: splunk:read                # scope needed to reach the endpoint
+
+    # Optional least-privilege. Without this the gateway gives ATTRIBUTED access,
+    # not FINE-GRAINED: any authenticated user reaches every upstream tool.
+    authorization:
+      toolPolicy:
+        default: deny
+        rules:
+          - whenScopes: [splunk:read]
+            allowTools: ["splunk_get_*", "splunk_run_query", "saia_*"]
+          - whenScopes: [splunk:admin]
+            allowTools: ["*"]
+
+    inbound:
+      # DNS-rebinding defense. Host allowlist defaults to server host; Origin is
+      # per-route (different clients per backend). Empty allowlist fails CLOSED.
+      allowedOrigins: [https://claude.ai, https://chatgpt.com]
+
+  # A second backend on the same host — different audience, different credential,
+  # different scope catalog. Demonstrates the multi-path model.
+  - path: /conduktor
+    mcpEndpoint: /mcp
+    resource: https://gw.example.com/conduktor/mcp
+    upstream:
+      url: https://conduktor.example.com/api/mcp
+      egress: corp-proxy
+      tls: { caBundle: system }
+      forwardHeaders: [accept, content-type, mcp-protocol-version, mcp-session-id, last-event-id]
+      timeouts: { connect: 5s, idle: none }
+    credential:
+      type: static-header
+      header: Authorization
+      scheme: Bearer
+      valueRef: k8s:atesaki-secrets/CONDUKTOR_TOKEN
+    identity: { provider: entra-corp, mode: redirect }
+    scopes:
+      catalog: [kafka:read, kafka:admin]
+      default: [kafka:read]
+      required: kafka:read
+    inbound:
+      allowedOrigins: [https://claude.ai]
