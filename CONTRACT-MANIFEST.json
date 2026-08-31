@@ -1,7 +1,7 @@
 {
   "algorithm": "sha256",
   "files": {
-    ".github/workflows/contract-guard.yml": "346e0c5c7363c068a0df6a01d7adb18d66e4941d7559440015110ba6eb5e8ec5",
+    ".github/workflows/contract-guard.yml": "4ff2f8bbe0936745eb8f8ea01411205789e7033a140a6ebd968621fcf966acaf",
     "docs/contract-boundaries.md": "3c498595c7bc05324156ba6dd2d68217528fa37247e360d5f1f4495d0b23ce0b",
     "docs/contract-grants.md": "942f461acfd21d2dbd507241882b3407851f5bc36756d1c159aedf1540afb40e",
     "docs/contract.md": "2204ef7373007479e5b0343ede2aa536c17ca3477bf8fc85db5c9518cdd7df28",
