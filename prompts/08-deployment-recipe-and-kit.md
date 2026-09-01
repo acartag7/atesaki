@@ -17,9 +17,9 @@ DELIVERABLES
    `NO_PROXY`, custom CA, NetworkPolicy limits), persistence (store + signing key,
    what is lost on restart), operations (audit permissions/rotation, rate limits,
    upgrade, stream shutdown), and the **client matrix** (registration model, callback
-   behavior, version tested, date — staleness window: **proposed 90 days, awaiting the owner** — the one-line B8
-   contract-change PR precedes this packet only after his approval; if unapproved,
-   STOP on this deliverable and report).
+   behavior, version tested, date — staleness window: **proposed 90 days, awaiting the
+   owner**. The B8 contract change precedes this deliverable only after owner approval.
+   If unanswered, report this deliverable as blocked and continue with the others).
 2. `idp-request` output templates per provider: the minimal ask, and the explicit
    "does NOT need" list (no Expose-an-API, no `api://` scopes, no per-client redirect
    churn), paste-ready for a ticket.

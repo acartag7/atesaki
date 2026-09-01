@@ -42,7 +42,8 @@
     implementation never changes contract or tests in its PRs without Arnold
     explicitly aware — CI hash-guard, dedicated contract-change PRs
     (`quality-bar.md`, "Who may change the contract"). §19's receipt semantics stay
-    as-is for the shared mcp-sso corpus.
+    as-is for the shared mcp-sso corpus. **The CI mechanism was superseded on
+    2026-09-01 by #52 before it landed; the owner-awareness rule remains.**
 13. ~~Parity profiles~~ **DECIDED 2026-08-30 (Arnold): split + list.** Every shared
     fixture is labeled *portable* (every implementation passes) or *host* (TypeScript
     reference only). Atesaki keeps a short public list of intentional differences —
@@ -163,10 +164,10 @@ future additions to grants extend the table, never the prose.
     (`contract.md §4`). Remaining #14 work for this rung shrinks to: assertion
     verification contract (signature/issuer/audience/expiry/clock skew), stripping of
     inbound identity headers on every other path, and the rehearse scenario.
-30. **The visibility gate does not exist yet.** The repo has no commits, no CI, no
-    guarded paths. Bootstrap order: first commit → CI workflow with hash manifest →
-    named guarded paths → a mutation test proving an implementation-shaped PR fails.
-    No implementation PR before that.
+30. ~~Visibility gate~~ **ABANDONED 2026-09-01:** the proposed hash manifest,
+    mutation harness, and pull-request workflow added maintenance work without owning
+    the engineering decision. PR #1 closed without merge. Replaced by the review
+    checkpoint in #52.
 31. ~~GrantV0 contract~~ **DRAFTED as `contract.md §3.2`** (2026-08-30) from the
     #22/#23/#25 rulings. Still consumes open inputs #26 (consent authorship), #27 (DCR
     mode), #28 (store durability), #7, #20, #21. The never-8/never-9 acceptance matrices
@@ -235,6 +236,12 @@ future additions to grants extend the table, never the prose.
 51. ~~portable 8.4~~ **DECIDED 2026-08-31 (Arnold):** existing regex matcher with the
     metadata path optional; host 8.4 unchanged, frozen only when the runner passes it; no schema/§19 change. The
     runner starts. (Triage applied: behavior need real, machinery not needed.)
+52. **DECIDED 2026-09-01: implementation mismatches are review checkpoints,
+    not automated gates.** The implementer states what does not fit and proposes a
+    concrete change. The owner approves, rejects, or refines it. Keep the change in the
+    current PR when the PR remains focused; otherwise split a smaller linked PR. Keep
+    working on unaffected items while the decision is pending. Never add exception
+    machinery to avoid the discussion.
 
 ## Process finding #2 (2026-08-31, Arnold: "9 rounds of review, something is wrong?")
 

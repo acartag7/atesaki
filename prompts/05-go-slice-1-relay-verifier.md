@@ -1,6 +1,6 @@
 MODEL: grok-4.5   EFFORT: high   FALLBACK: gpt-5.6-terra   TOOL: Codex CLI or pi, in a fresh clone of ~/project/atesaki-core
-PRECONDITION: contract tagged `contract-v0-freeze`; Atesaki fixtures hash-locked; gate
-green; **mcp-sso's §8 verifier fixtures frozen with receipts** — the honest cross-lane
+PRECONDITION: contract tagged `contract-v0-freeze`; Atesaki fixtures hash-locked;
+**mcp-sso's §8 verifier fixtures frozen with receipts** — the honest cross-lane
 input: this slice's verifier is inherited §07/§08 behavior, proven against the shared
 corpus, never re-authored here.
 WHY: the first things that run — the Atesaki fixture RUNNER, then relay + verifier +
@@ -50,8 +50,9 @@ SCOPE — build exactly this, nothing from slices 2–3:
 HARD RULES: implement only what the locked fixtures and the cited sections require;
 no special-casing fixture strings; no invented library APIs (grep the module source);
 stdlib first — every dependency justified in the PR with version and publish date and
-age per the target repo's dependency policy file (read it; assume no number); **never touch docs/ or fixtures/** (the gate fails you) — a gap is a PR
-comment, then continue; fail closed on every ambiguity; no `value || default` on a
+age per the target repo's dependency policy file (read it; assume no number); **never
+touch docs/ or fixtures silently** — follow the review checkpoint in
+`prompts/README.md`; a gap is a PR comment, then continue; fail closed on every ambiguity; no `value || default` on a
 security selector; `O_NOFOLLOW` opens; explicit directory modes.
 
 VERIFY: the Atesaki runner green on every locked slice-1 fixture, zero skips, and
@@ -60,7 +61,8 @@ you can run) with a static-header credential and show a tool call succeed throug
 relay with a locally minted token and be refused with a token for another route.
 Name the real server you used.
 
-DONE WHEN: all slice-1 fixtures green, zero skips; `validate`/`routes`/`serve` work on the three valid example configs; gate + lint green; PR opened.
+DONE WHEN: all slice-1 fixtures green, zero skips; `validate`/`routes`/`serve`
+work on the three valid example configs; implementation checks green; PR opened.
 
 REPORT: fixtures passed/failed by id; the real MCP you relayed; every contract gap;
 every place the contract was ambiguous and what you did NOT decide.

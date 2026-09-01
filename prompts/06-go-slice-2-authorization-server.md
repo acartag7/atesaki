@@ -2,7 +2,7 @@ MODEL: grok-4.5   EFFORT: high   FALLBACK: gpt-5.6-terra   TOOL: Codex CLI or pi
 PRECONDITION: slice 1 merged (its runner already executes the mcp-sso §8 portable
 subset); the mcp-sso corpus pinned at an exact commit + `MANIFEST.json` hash, and the
 **exact frozen portable fixture-ID set** this build will pass listed in the PR before
-any code — the gate is IDs, not section names; the Atesaki delta fixtures for
+any code — acceptance is by ID, not section name; the Atesaki delta fixtures for
 D1/D3/D4 locked.
 WHY: Atesaki's authorization-server half proves itself against the shared corpus —
 parity by fixture, not by memory.
@@ -48,7 +48,8 @@ named with the client version. The full sign-in-to-tool-call proof
 belongs to slice 3, when grants exist.
 
 DONE WHEN: parity status line published in the PR (corpus version passed, current,
-frozen fixtures not yet passed with reasons); real-client sign-in shown; gate green.
+frozen fixtures not yet passed with reasons); real-client sign-in shown;
+implementation checks green.
 
 REPORT: parity line; deferred fixtures and why; every contract gap; divergences from
 mcp-sso you found that have no delta row (these are the most important findings).
