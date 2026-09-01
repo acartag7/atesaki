@@ -19,11 +19,15 @@
    **Evidence 2026-09-01 (live probe; private evidence
    `atesaki/evidence/prm-probe-2026-09-01/`):** Codex CLI 0.151.0 mints a
    **per-server-registration** CIMD document, `https://chatgpt.com/oauth/codex/<id>/client.json`,
-   whose `redirect_uris` carry the same random id; two registrations on one machine
-   produced two different documents. A vendored-only `clients.knownCimd` therefore cannot
-   onboard Codex at all. Claude Code's document URL is stable and vendorable. The question
-   is now "which clients work without live fetch", and the answer today is: not Codex.
-   Live fetch, if allowed, goes through the named egress profile with B5 caps. Arnold decides.
+   whose `redirect_uris` carry the same random id. The id is stable for a registration
+   (a second login for the same entry reused it) but different for every Codex
+   installation and every server entry: two entries on one machine produced two
+   documents. Vendored-only onboarding is therefore possible but means one document per
+   user per route, collected from each user before that user can sign in, which
+   contradicts onboarding's "no pre-provisioning". Claude Code's document URL is one
+   stable URL for every install. The question is now whether that per-user vendoring
+   step is acceptable or live fetch is required; live fetch, if allowed, goes through the
+   named egress profile with B5 caps. Arnold decides.
 6. ~~In-cluster TLS/mTLS to upstreams~~ **DECIDED 2026-08-31 (Arnold): recipe
    obligation only in v0** — the product cannot enforce network position; §14 states
    it plainly; `validate --deep` warns on plain-http upstreams beyond loopback/private
@@ -275,7 +279,10 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     union `[a.read, b.read]`, Codex CLI 0.151.0 requested `scope=a.read b.read` at
     `/authorize` for **both** routes: it reads the AS metadata, not the route's PRM.
     Under the inherited §9.3 step 3 a scope outside the route catalog is `invalid_scope`,
-    so every Codex login against a multi-route gateway would fail. Options: (a) omit
+    so a Codex login fails on any route whose catalog lacks a scope in the advertised
+    union: every gateway whose routes have different catalogs, which is the product's
+    normal shape (`/splunk-read` vs `/splunk-admin`). Routes with identical catalogs are
+    unaffected. Options: (a) omit
     `scopes_supported` from AS metadata (optional in RFC 8414); (b) narrow to the catalog
     and emit `scope_ceiling_applied`; (c) refuse. Arnold decides; the answer becomes a
     B-rule and a fixture. Claude Code's scope request was not observed (its authorize
