@@ -19,8 +19,9 @@ PROVISIONAL PHASES
      `upstream.credential` type, each `egress.profiles` proxy form; a valid arm with
      no positive case cannot merge
    - the smallest `tools/schema-check.py` path that proves those examples pass
-   - bidirectional B1 property-to-schema drift check; this phase cannot merge with
-     an omitted or invented property
+   - bidirectional property-to-schema drift check over the B1 rows and B4's
+     `assertion` shape (B1 lists `identity.assertion` as one object; its fields live
+     in B4); this phase cannot merge with an omitted or invented property
    - a starter refusal set in `schema/mutations/` — missing required field, wrong
      type, null required, unknown field, field from an inactive `provider` variant —
      asserted by the checker; a schema that does not refuse these cannot merge on
@@ -49,7 +50,7 @@ PROVISIONAL PHASES
    - bidirectional G2 record-field-to-schema drift check; this phase cannot merge
      with an omitted or invented property
 4. `test(schema): enforce contract-schema drift`
-   - rerun the B1 property-to-schema comparison in both directions
+   - rerun the B1-plus-B4 property-to-schema comparison in both directions
    - rerun the G2 record-field-to-schema comparison in both directions
    - coverage check that every union arm has a phase-1 positive case
    - coverage check that every checker-owned semantic rule has an executable
@@ -97,8 +98,9 @@ DELIVERABLES
    `schema/mutations/*` fails **for the named rule**, not merely fails, and every
    logical-record case is checked against its named schema for its expected result.
    Semantic rules JSON Schema cannot express are asserted here in Python.
-5. Drift checks: every B1 row must map to a config-schema property and vice versa;
-   every G2 record field must map to its logical record schema and vice versa. Print
+5. Drift checks: every B1 row and every B4 `assertion` field must map to a
+   config-schema property and vice versa; every G2 record field must map to its
+   logical record schema and vice versa. Print
    both diffs. Where a contract table and schema disagree, STOP and list it as a
    contract gap — do not silently pick.
 
