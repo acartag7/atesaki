@@ -19,9 +19,11 @@ PROVISIONAL PHASES
      `upstream.credential` type, each `egress.profiles` proxy form; a valid arm with
      no positive case cannot merge
    - the smallest `tools/schema-check.py` path that proves those examples pass
-   - bidirectional property-to-schema drift check over the B1 rows and B4's
-     `assertion` shape (B1 lists `identity.assertion` as one object; its fields live
-     in B4); this phase cannot merge with an omitted or invented property
+   - bidirectional property-to-schema drift check over every B1 property, including
+     the ones nested inside a row's type cell (`upstream.credential.scheme`,
+     `egress.profiles.<name>.caBundleRef`, the `grant.policy.rules[].when` members)
+     and B4's `assertion` shape (B1 lists `identity.assertion` as one object; its
+     fields live in B4); this phase cannot merge with an omitted or invented property
    - a starter refusal set in `schema/mutations/` — missing required field, wrong
      type, null required, unknown field, field from an inactive `provider` variant —
      asserted by the checker; a schema that does not refuse these cannot merge on
@@ -53,10 +55,12 @@ PROVISIONAL PHASES
    - rerun the B1-plus-B4 property-to-schema comparison in both directions
    - rerun the G2 record-field-to-schema comparison in both directions
    - coverage check that every union arm has a phase-1 positive case
-   - coverage check that every checker-owned semantic rule has an executable
-     phase-2 mutation and named-rule assertion
-   - coverage check that every record has its positive case and a refusal per
-     unconditional field, and that every G5 state branch and `grant_event` reason
+   - coverage check that every structural refusal rule in B1–B4 and every
+     checker-owned semantic rule has an executable phase-2 mutation and named-rule
+     assertion — the rule inventory is the source, the mutation files are the target
+   - coverage check that every record has its positive case, a missing-field refusal
+     per unconditional required field, and a wrong-type refusal per typed field —
+     counted separately — and that every G5 state branch and `grant_event` reason
      branch has a phase-3 valid case and a refusal per state-dependent field
    - final full-schema and mutation run
 
@@ -90,17 +94,18 @@ DELIVERABLES
    `grant_request`, `preapproval`, `grant`, `authorization_code` (delta fields only),
    `grant_event`, `machine_tombstone`; state-dependent required/absent fields via
    `if/then`; RFC 3339 UTC 3-ms-digit timestamps as a pattern; snake_case only. Every
-   record has a positive case and a refusal per unconditional required and typed
-   field; every G5 state branch and every `grant_event` reason branch adds a valid
-   case and one refusal per state-dependent field.
+   record has a positive case, a missing-field refusal per unconditional required
+   field, and a wrong-type refusal per typed field; every G5 state branch and every
+   `grant_event` reason branch adds a valid case and one refusal per state-dependent
+   field.
 4. `tools/schema-check.py` (stdlib + one pinned validator only if unavoidable — name
    the version and publish date): validates every `schema/valid/*` passes, every
    `schema/mutations/*` fails **for the named rule**, not merely fails, and every
    logical-record case is checked against its named schema for its expected result.
    Semantic rules JSON Schema cannot express are asserted here in Python.
-5. Drift checks: every B1 row and every B4 `assertion` field must map to a
-   config-schema property and vice versa; every G2 record field must map to its
-   logical record schema and vice versa. Print
+5. Drift checks: every B1 property, nested ones included, and every B4 `assertion`
+   field must map to a config-schema property and vice versa; every G2 record field
+   must map to its logical record schema and vice versa. Print
    both diffs. Where a contract table and schema disagree, STOP and list it as a
    contract gap — do not silently pick.
 
