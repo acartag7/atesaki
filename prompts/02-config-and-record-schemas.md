@@ -38,9 +38,9 @@ DELIVERABLES
    diff. Where the table and the schema disagree, STOP and list it as a contract gap —
    do not silently pick.
 
-HARD RULES: contract-change PR (label `contract-change`); touches only `schema/**`,
-`tools/schema-check.py`, `CONTRACT-MANIFEST.json`, and — only for gaps you are asked
-to fix — B1 itself with a one-line reason per change. No Go code.
+HARD RULES: one focused schema PR; touches only `schema/**`,
+`tools/schema-check.py`, and — only for gaps the owner asks you to fix — B1 itself with
+a one-line reason per change. No Go code.
 
 DONE WHEN: `tools/schema-check.py` green; drift diff empty or every diff listed as a
 gap; lint green.

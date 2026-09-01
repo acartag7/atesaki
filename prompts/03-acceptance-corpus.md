@@ -1,8 +1,8 @@
 MODEL: gpt-5.6-sol   EFFORT: xhigh   TOOL: Codex CLI in ~/project/atesaki-core
 FALLBACK: grok-4.5
 WHY: the tests a WRONG build fails. Atesaki's own fixture corpus, in the shared §19
-format, for everything mcp-sso's corpus does not cover. Contract-change PR. These are
-hash-locked by the gate once Arnold approves; they may run red until Go exists.
+format, for everything mcp-sso's corpus does not cover. Each focused fixture PR is
+owner-reviewed before merge; the fixtures may run red until Go exists.
 
 Read first, fully: ~/project/mcp-sso/docs/contracts/19-parity-fixture-protocol.md and
 fixtures/schema/fixture.schema.json (the format, incl. `profile`, seeded randomness,
@@ -62,11 +62,12 @@ foreign ids on every id-taking action; exact refusal, never "any 4xx"; never cat
 fixture's own failure; fresh sentinel subjects per fixture; garbage is refusal, never a
 save. A fixture and a fail-closed rule in conflict → the rule wins; record why.
 
-HARD RULES: contract-change PR; contract pages unchanged (gaps go in the PR text, not
-into the docs); no Go code; nothing may depend on the machine running it.
+HARD RULES: one self-explanatory fixture behavior per PR; contract pages unchanged
+unless the owner accepts a proposal under `prompts/README.md`; no Go code; nothing
+may depend on the machine running it.
 
 DONE WHEN: schema-valid fixtures; coverage map lists every uncovered clause explicitly;
-lint green; gate green.
+fixture checks green.
 
 REPORT: coverage counts per page; uncovered clauses; contract gaps (rows you could not
 fixture as written and why) — the most valuable output.

@@ -11,9 +11,10 @@ the locked fixtures it claims to pass · docs/deltas.md · docs/threat-model.md 
 docs/negative-matrix.md · prompts/README.md conventions.
 
 CHECK, in this order:
-1. **Gate**: did the PR touch any contract page or locked fixture? If yes, record it
-   as the first finding and **continue the full review** — report everything; a gate
-   hit does not excuse skipping the sibling sweep.
+1. **Scope**: did the PR touch a contract page or locked fixture without the owner
+   decision required by `prompts/README.md`? If yes, record it as the first finding
+   and **continue the full review**. Report everything; a scope finding does not excuse
+   skipping the sibling sweep.
 2. **Claims vs code**: for every "passes fixture X" claim, run it; for every "never"
    the PR touches, find the enforcing code path and the test that fails without it.
    Revert the fix locally and confirm the regression test goes red — a test that

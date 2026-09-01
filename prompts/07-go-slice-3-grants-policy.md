@@ -50,7 +50,7 @@ assertions (nothing consumed/nothing issued, or committed-with-E1); a real end-t
 client: request → pending → `grants approve` → re-run → tool call → `grants revoke`
 → refresh refused, access dies at TTL.
 
-DONE WHEN: above verified and named; gate green; PR opened.
+DONE WHEN: above verified and named; implementation checks green; PR opened.
 
 REPORT: fixtures by id; crash-test and race-test outputs; every contract gap; every
 operation-table cell you could not implement as written.

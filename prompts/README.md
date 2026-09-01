@@ -1,15 +1,16 @@
 # Prompts — dispatch packets for every remaining piece of work
 
-Each file is pasted into a **fresh session** of the named tool. This design repo writes
-rules, tests, and prompts; it never runs the builder itself. Fill every `<…>` before
-pasting. Model lines follow the house template and are Arnold's to swap — review seats
-are never downgraded to a cheaper tier.
+Each active packet is pasted into a **fresh session** of the named tool. Retired packets
+are marked and never dispatched. This design repo writes rules, tests, and prompts; it
+never runs the builder itself. Fill every `<…>` before pasting. Model lines follow the
+house template and are the owner's to swap — review seats are never downgraded to a
+cheaper tier.
 
 ## Order and gates
 
 ```
- BEFORE FREEZE   00 freeze-readiness review (repeat until a round finds nothing)
-                 01 repo gate bootstrap            (needs Arnold: "commit")
+ BEFORE FREEZE   00 RETIRED — prose review closed after process finding #2
+                 01 RETIRED — repository bootstrap landed; contract gate abandoned
                  02 config + record schemas
                  03 Atesaki corpus: fixture-format profile FIRST, then the fixtures
                  04 threat model + negative matrix
@@ -32,11 +33,16 @@ are never downgraded to a cheaper tier.
 ## Conventions every packet shares
 
 - **Read-first lists are exact.** Read the whole file, not the first screen.
-- **The implementation never writes on the contract.** Contract pages and acceptance
-  fixtures change only in a dedicated contract PR Arnold approves. An implementation
-  PR touching them fails the gate (01).
-- **Ambiguity is a contract gap, not your call.** Stop, record the exact question in
-  the PR under "contract gaps", continue with the next item. Never invent a rule.
+- **One self-explanatory review unit per PR.** If a packet or milestone needs a large
+  change, decouple it into small serial PRs. Merge each PR before branching the next
+  from current `main`. Each PR explains and verifies its own behavior.
+- **The implementation never changes the contract silently.** When something does not
+  fit, state the exact conflict and propose a concrete change. Continue with unaffected
+  work. The owner decides whether the focused PR may include the change or whether to
+  split a smaller linked PR.
+- **Ambiguity is a contract gap, not your call.** Record the exact question in the PR
+  under "contract gaps" and continue with the next item. Stop only the affected work.
+  Never invent a rule.
 - **Never weaken a fail-closed control to make a test pass.**
 - **Verify by running** — the test suite, the binary, a real input. "Compiles" is not
   done. Name the real input you ran.
