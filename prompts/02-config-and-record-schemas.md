@@ -14,6 +14,8 @@ PROVISIONAL PHASES
    - `schema/atesaki-config.schema.json`
    - the three complete `schema/valid/` examples
    - the smallest `tools/schema-check.py` path that proves those examples pass
+   - bidirectional B1 property-to-schema drift check; this phase cannot merge with
+     an omitted or invented property
 2. `test(schema): add config refusal mutations`
    - structural B1/B2/B3 mutations
    - semantic B1/B2/B3 mutations, including machine scopes outside the route
@@ -28,7 +30,7 @@ PROVISIONAL PHASES
    - `tools/schema-check.py` mapping from each record case to its logical schema,
      with the expected pass or named-rule refusal asserted
 4. `test(schema): enforce contract-schema drift`
-   - B1 property-to-schema comparison in both directions
+   - rerun the B1 property-to-schema comparison in both directions
    - coverage check that every semantic rule listed for `validate` has an
      executable phase-2 mutation and named-rule assertion
    - final full-schema and mutation run
