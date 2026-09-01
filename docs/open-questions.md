@@ -16,6 +16,14 @@
    (inherited), authorize 60, token 120; keyed after B6 proxy unwrapping.
 5. **CIMD live fetch: forbidden entirely, or opt-in behind an explicit key?** v0 serves
    vendored documents either way; the question is whether the option exists at all.
+   **Evidence 2026-09-01 (live probe; private evidence
+   `atesaki/evidence/prm-probe-2026-09-01/`):** Codex CLI 0.151.0 mints a
+   **per-server-registration** CIMD document, `https://chatgpt.com/oauth/codex/<id>/client.json`,
+   whose `redirect_uris` carry the same random id; two registrations on one machine
+   produced two different documents. A vendored-only `clients.knownCimd` therefore cannot
+   onboard Codex at all. Claude Code's document URL is stable and vendorable. The question
+   is now "which clients work without live fetch", and the answer today is: not Codex.
+   Live fetch, if allowed, goes through the named egress profile with B5 caps. Arnold decides.
 6. ~~In-cluster TLS/mTLS to upstreams~~ **DECIDED 2026-08-31 (Arnold): recipe
    obligation only in v0** — the product cannot enforce network position; §14 states
    it plainly; `validate --deep` warns on plain-http upstreams beyond loopback/private
@@ -34,6 +42,11 @@
     (§07, §09, §10, §11 before Go AS work can start proving parity).
 11. **EMA / ID-JAG**: watch item. When Entra ships it, does Atesaki's AS accept the
     grant type? (Today: Okta-only in the wild; not a v0 decision.)
+    **Update 2026-09-01:** the MCP project promoted Enterprise-Managed Authorization to
+    stable on 2026-06-18, Okta first via Cross App Access; Microsoft states Entra plus
+    App Service deliver enterprise MCP authorization today with the full EMA protocol
+    "on the horizon". Still a watch item. Atesaki's AS would be the ID-JAG audience, so
+    EMA does not remove the front door; it does put a clock on "no IdP change" as a moat.
 
 ## Added 2026-08-30 after the freeze-readiness review (verdict: not freeze-ready)
 
@@ -254,3 +267,16 @@ prose — an adversarial reader of 1,500 normative lines always finds another ce
 **Rule from here:** round 9 is the last prose round; only its P0/P1s are swept; all
 further truth-finding happens in terminating, executable form (lint, schema mutation
 suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
+
+## Added 2026-09-01 after the live discovery probe
+
+53. **AS metadata `scopes_supported` drives Codex's scope request.** With per-route PRM
+    advertising `scopes_supported: [a.read]` and the origin AS metadata advertising the
+    union `[a.read, b.read]`, Codex CLI 0.151.0 requested `scope=a.read b.read` at
+    `/authorize` for **both** routes: it reads the AS metadata, not the route's PRM.
+    Under the inherited §9.3 step 3 a scope outside the route catalog is `invalid_scope`,
+    so every Codex login against a multi-route gateway would fail. Options: (a) omit
+    `scopes_supported` from AS metadata (optional in RFC 8414); (b) narrow to the catalog
+    and emit `scope_ceiling_applied`; (c) refuse. Arnold decides; the answer becomes a
+    B-rule and a fixture. Claude Code's scope request was not observed (its authorize
+    step needs the interactive `/mcp` menu).

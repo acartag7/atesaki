@@ -28,3 +28,11 @@ changing the named rule) · `[P]` proposed, awaiting Arnold.
 | D12 `[D ← G8]` | Failure atomicity | Post-consumption clock failure leaves the JTI consumed by design (§9.3) | All fallible steps precede the transaction; JTI consumption commits with the grant; failure before commit consumes nothing | §09.3 consumed-on-late-failure → host |
 
 That is the whole list. A growing list is a design smell to raise, not a convenience.
+
+**D1 live check (2026-09-01, private evidence `atesaki/evidence/prm-probe-2026-09-01/`):**
+against a probe serving two routes under one origin with a per-route path-inserted PRM and
+no origin-root PRM, Codex CLI 0.151.0 and Claude Code 2.1.257 both fetched the
+path-inserted document directly and never requested the origin root; Codex sent the
+route URL byte-exact as `resource` for each route and used its CIMD client id without
+DCR. Claude Code's authorize step and the claude.ai connector (anthropics/claude-ai-mcp#738)
+remain unobserved; VS Code untested.
