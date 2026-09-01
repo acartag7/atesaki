@@ -16,7 +16,10 @@ PROVISIONAL PHASES
    - the smallest `tools/schema-check.py` path that proves those examples pass
 2. `test(schema): add config refusal mutations`
    - structural B1/B2/B3 mutations
-   - named-rule failure assertions in `tools/schema-check.py`
+   - semantic B1/B2/B3 mutations, including machine scopes outside the route
+     catalog and declarations wholly denied by their route rules
+   - named-rule failure assertions in `tools/schema-check.py`, including the
+     `validate` path for rules JSON Schema cannot express
    - split by boundary section if the refusal set is not one reviewable unit
 3. `feat(schema): add logical record schemas`
    - the six `schema/records/*.schema.json` files
@@ -24,7 +27,8 @@ PROVISIONAL PHASES
    - focused valid and refusal cases
 4. `test(schema): enforce contract-schema drift`
    - B1 property-to-schema comparison in both directions
-   - semantic rules that JSON Schema cannot express listed for `validate`
+   - coverage check that every semantic rule listed for `validate` has an
+     executable phase-2 mutation and named-rule assertion
    - final full-schema and mutation run
 
 Read first, fully: docs/contract-boundaries.md (B1–B8, every field and refusal rule —
