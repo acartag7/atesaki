@@ -25,6 +25,8 @@ PROVISIONAL PHASES
    - the six `schema/records/*.schema.json` files
    - state-dependent required and absent fields
    - focused valid and refusal cases
+   - `tools/schema-check.py` mapping from each record case to its logical schema,
+     with the expected pass or named-rule refusal asserted
 4. `test(schema): enforce contract-schema drift`
    - B1 property-to-schema comparison in both directions
    - coverage check that every semantic rule listed for `validate` has an
