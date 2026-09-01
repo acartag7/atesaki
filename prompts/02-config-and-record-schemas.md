@@ -21,13 +21,16 @@ PROVISIONAL PHASES
      `keys` union combinations
    - semantic B1/B2/B3 mutations, including machine scopes outside the route
      catalog and declarations wholly denied by their route rules
-   - named-rule failure assertions in `tools/schema-check.py`, including the
-     `validate` path for rules JSON Schema cannot express
+   - named-rule failure assertions in `tools/schema-check.py`; rules JSON Schema
+     cannot express are checker-owned Python assertions here — there is no
+     `atesaki validate` binary before packet 05 and this packet writes no Go
    - split by boundary section if the refusal set is not one reviewable unit
 3. `feat(schema): add logical record schemas`
    - the six `schema/records/*.schema.json` files
    - state-dependent required and absent fields
-   - focused valid and refusal cases
+   - a valid and a refusal case for every state-dependent required/absent-field
+     branch in G5 and for every per-reason `grant_event` field branch; a state or
+     reason branch with no case cannot merge
    - `tools/schema-check.py` mapping from each record case to its logical schema,
      with the expected pass or named-rule refusal asserted
    - bidirectional G2 record-field-to-schema drift check; this phase cannot merge
@@ -35,8 +38,10 @@ PROVISIONAL PHASES
 4. `test(schema): enforce contract-schema drift`
    - rerun the B1 property-to-schema comparison in both directions
    - rerun the G2 record-field-to-schema comparison in both directions
-   - coverage check that every semantic rule listed for `validate` has an
-     executable phase-2 mutation and named-rule assertion
+   - coverage check that every checker-owned semantic rule has an executable
+     phase-2 mutation and named-rule assertion
+   - coverage check that every G5 state branch and `grant_event` reason branch has
+     a phase-3 valid and refusal case
    - final full-schema and mutation run
 
 Read first, fully: docs/contract-boundaries.md (B1–B8, every field and refusal rule —
@@ -60,19 +65,21 @@ DELIVERABLES
    list-for-scalar, inline secret, non-canonical URL, nested routes, reserved-path
    route, empty catalog, malformed signed-assertion and `keys` union combinations,
    machine scopes outside the route catalog, declaration wholly denied by its route
-   rules — that one is a semantic check, note it as out of schema scope and in
-   `validate`'s scope). Each names the B-rule it exercises. Plus
-   `schema/valid/` — at least three complete valid configs: console loopback,
-   Entra dedicated with two routes sharing an upstream, header-mode signed assertion
-   with a machine client.
+   rules — that one is a semantic check: out of JSON Schema scope, asserted by the
+   checker here and again by `atesaki validate` in packet 05). Each names the B-rule
+   it exercises. Plus `schema/valid/` — at least three complete valid configs: console
+   loopback, Entra dedicated with two routes sharing an upstream, header-mode signed
+   assertion with a machine client.
 3. `schema/records/*.schema.json` — the portable logical record schemas from G2:
    `grant_request`, `preapproval`, `grant`, `authorization_code` (delta fields only),
    `grant_event`, `machine_tombstone`; state-dependent required/absent fields via
-   `if/then`; RFC 3339 UTC 3-ms-digit timestamps as a pattern; snake_case only.
+   `if/then`; RFC 3339 UTC 3-ms-digit timestamps as a pattern; snake_case only. Every
+   G5 state branch and every `grant_event` reason branch has a valid and a refusal case.
 4. `tools/schema-check.py` (stdlib + one pinned validator only if unavoidable — name
    the version and publish date): validates every `schema/valid/*` passes, every
    `schema/mutations/*` fails **for the named rule**, not merely fails, and every
    logical-record case is checked against its named schema for its expected result.
+   Semantic rules JSON Schema cannot express are asserted here in Python.
 5. Drift checks: every B1 row must map to a config-schema property and vice versa;
    every G2 record field must map to its logical record schema and vice versa. Print
    both diffs. Where a contract table and schema disagree, STOP and list it as a
