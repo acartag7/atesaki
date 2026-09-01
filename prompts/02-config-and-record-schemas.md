@@ -12,7 +12,12 @@ and report the remaining work.
 PROVISIONAL PHASES
 1. `feat(schema): add config schema validation`
    - `schema/atesaki-config.schema.json`
-   - the three complete `schema/valid/` examples
+   - the three complete `schema/valid/` examples, plus one positive case per arm of
+     every tagged or one-of union in B1 and B4 — each `identity.provider` variant
+     including `oidc`, `clientSecretRef` versus `publicClient`, `registration`
+     `dedicated` versus `shared`, `keys` `jwksUrl` versus `jwksRef`, each
+     `upstream.credential` type, each `egress.profiles` proxy form; a valid arm with
+     no positive case cannot merge
    - the smallest `tools/schema-check.py` path that proves those examples pass
    - bidirectional B1 property-to-schema drift check; this phase cannot merge with
      an omitted or invented property
@@ -36,6 +41,8 @@ PROVISIONAL PHASES
      branch, plus one refusal mutation per independently required or forbidden field
      inside each branch (an approved `preapproval` alone carries several); a branch
      or field with no case cannot merge
+   - `authorization_code` and `machine_tombstone` have no state or reason branch: each
+     gets a positive case plus one refusal per required field and per typed field
    - `tools/schema-check.py` mapping from each record case to its logical schema,
      with the expected pass or named-rule refusal asserted
    - bidirectional G2 record-field-to-schema drift check; this phase cannot merge
@@ -43,10 +50,12 @@ PROVISIONAL PHASES
 4. `test(schema): enforce contract-schema drift`
    - rerun the B1 property-to-schema comparison in both directions
    - rerun the G2 record-field-to-schema comparison in both directions
+   - coverage check that every union arm has a phase-1 positive case
    - coverage check that every checker-owned semantic rule has an executable
      phase-2 mutation and named-rule assertion
    - coverage check that every G5 state branch and `grant_event` reason branch has
-     a phase-3 valid case and a refusal per state-dependent field
+     a phase-3 valid case and a refusal per state-dependent field, and that each
+     non-stateful record has its positive and per-field refusal cases
    - final full-schema and mutation run
 
 Read first, fully: docs/contract-boundaries.md (B1–B8, every field and refusal rule —
@@ -74,13 +83,14 @@ DELIVERABLES
    checker here and again by `atesaki validate` in packet 05). Each names the B-rule
    it exercises. Plus `schema/valid/` — at least three complete valid configs: console
    loopback, Entra dedicated with two routes sharing an upstream, header-mode signed
-   assertion with a machine client.
+   assertion with a machine client — and one positive case per union arm (phase 1).
 3. `schema/records/*.schema.json` — the portable logical record schemas from G2:
    `grant_request`, `preapproval`, `grant`, `authorization_code` (delta fields only),
    `grant_event`, `machine_tombstone`; state-dependent required/absent fields via
    `if/then`; RFC 3339 UTC 3-ms-digit timestamps as a pattern; snake_case only. Every
    G5 state branch and every `grant_event` reason branch has a valid case and one
-   refusal per state-dependent field.
+   refusal per state-dependent field; `authorization_code` and `machine_tombstone`
+   get a positive case and a refusal per required and typed field.
 4. `tools/schema-check.py` (stdlib + one pinned validator only if unavoidable — name
    the version and publish date): validates every `schema/valid/*` passes, every
    `schema/mutations/*` fails **for the named rule**, not merely fails, and every
