@@ -1,6 +1,13 @@
 # Atesaki
 
-**Status: DRAFT contract. Nothing is frozen. No product code exists yet, on purpose.**
+**Status: DRAFT contract. Nothing is frozen.** Product code is being built slice by
+slice against the contract as it stands; each PR names the sections it implements.
+
+```
+go build ./cmd/atesaki
+atesaki validate atesaki.yaml   # pure validation: reads config, touches nothing else
+atesaki routes   atesaki.yaml   # the route and well-known path list, as JSON
+```
 
 A team has a useful internal service an AI agent could use, but the only way in is a
 shared key nobody wants to hand out. The operator runs one container in front of it and
