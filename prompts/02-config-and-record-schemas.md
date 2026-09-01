@@ -2,6 +2,31 @@ MODEL: gpt-5.6-sol   EFFORT: xhigh   TOOL: Codex CLI in ~/project/atesaki-core
 WHY: B1 is a reference table until a machine-readable schema exists (open question
 #36). The schema and its mutation suite are freeze artifacts. Contract-change PR.
 
+RUN MODE: this packet lands through serial PRs. On each fresh run, fetch `origin/main`
+and inspect which phases below have merged. Implement only the first incomplete phase.
+Branch from current `origin/main`, open one self-explanatory PR, verify it, and stop.
+After the owner merges it, start the next phase from the new `origin/main`. Never
+stack phases. If a phase is still too large to review as one behavior, split it again
+and report the remaining work.
+
+PROVISIONAL PHASES
+1. `feat(schema): add config schema validation`
+   - `schema/atesaki-config.schema.json`
+   - the three complete `schema/valid/` examples
+   - the smallest `tools/schema-check.py` path that proves those examples pass
+2. `test(schema): add config refusal mutations`
+   - structural B1/B2/B3 mutations
+   - named-rule failure assertions in `tools/schema-check.py`
+   - split by boundary section if the refusal set is not one reviewable unit
+3. `feat(schema): add logical record schemas`
+   - the six `schema/records/*.schema.json` files
+   - state-dependent required and absent fields
+   - focused valid and refusal cases
+4. `test(schema): enforce contract-schema drift`
+   - B1 property-to-schema comparison in both directions
+   - semantic rules that JSON Schema cannot express listed for `validate`
+   - final full-schema and mutation run
+
 Read first, fully: docs/contract-boundaries.md (B1–B8, every field and refusal rule —
 B4 in full: the signed-assertion union is a schema shape) · docs/contract.md §2, §4,
 §13 · docs/contract-grants.md G2, G5, G6, G7, G10, G12 (record states and the
@@ -38,12 +63,15 @@ DELIVERABLES
    diff. Where the table and the schema disagree, STOP and list it as a contract gap —
    do not silently pick.
 
-HARD RULES: one focused schema PR; touches only `schema/**`,
-`tools/schema-check.py`, and — only for gaps the owner asks you to fix — B1 itself with
-a one-line reason per change. No Go code.
+HARD RULES: one phase and one PR per run; touches only `schema/**`,
+`tools/schema-check.py`, and — only for gaps the owner asks you to fix — B1 itself
+with a one-line reason per change. No Go code. Do not start the next phase before the
+current PR merges.
 
-DONE WHEN: `tools/schema-check.py` green; drift diff empty or every diff listed as a
-gap; lint green.
+RUN DONE WHEN: the current phase is verified and its PR is open. PACKET DONE WHEN:
+`tools/schema-check.py` is green across all merged phases; the drift diff is empty or
+every difference is listed as a gap; lint is green.
 
-REPORT: B1↔schema drift list; rules the schema cannot express (belong to `validate`);
-open questions the field table left unanswered.
+REPORT EACH RUN: phase and PR; exact head SHA; changed behavior; checks run; remaining
+phases; B1↔schema drift found so far; rules the schema cannot express; open questions
+the field table left unanswered.

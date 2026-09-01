@@ -11,7 +11,7 @@ cheaper tier.
 ```
  BEFORE FREEZE   00 RETIRED — prose review closed after process finding #2
                  01 RETIRED — repository bootstrap landed; contract gate abandoned
-                 02 config + record schemas
+                 02 config + record schemas         (serial phases; one PR per run)
                  03 Atesaki corpus: fixture-format profile FIRST, then the fixtures
                  04 threat model + negative matrix
                  packet 12: the #24 grants-authority contract (needs Arnold's ruling on the proposal) — before 07
