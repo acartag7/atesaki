@@ -544,6 +544,9 @@ func parseRoute(c *collector, res, name string, specV any) *Route {
 			r.Catalog = catalog
 		}
 		if def, ok := sc.strList("default", false); ok {
+			if len(def) > scopeMaxEntries {
+				c.addf(res, "spec.scopes.default", "B1.scope", "more than %d scopes", scopeMaxEntries)
+			}
 			for i, s := range def {
 				if !contains(r.Catalog, s) {
 					c.add(res, fmt.Sprintf("spec.scopes.default[%d]", i), "B1.scope", "default scope is not in the catalog")

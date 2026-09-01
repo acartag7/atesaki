@@ -140,6 +140,9 @@ func checkURL(raw string, rules urlRules) (*url.URL, error) {
 		return nil, errors.New("userinfo is refused")
 	}
 	host, port := u.Hostname(), u.Port()
+	if strings.HasSuffix(u.Host, ":") {
+		return nil, errors.New("empty port after the colon is refused")
+	}
 	if strings.Contains(u.Host, ":") && !strings.HasPrefix(u.Host, "[") && strings.Count(u.Host, ":") > 1 {
 		return nil, errors.New("IPv6 literals must be bracketed")
 	}
