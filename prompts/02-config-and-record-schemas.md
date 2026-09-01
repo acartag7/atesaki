@@ -16,6 +16,10 @@ PROVISIONAL PHASES
    - the smallest `tools/schema-check.py` path that proves those examples pass
    - bidirectional B1 property-to-schema drift check; this phase cannot merge with
      an omitted or invented property
+   - a starter refusal set in `schema/mutations/` — missing required field, wrong
+     type, null required, unknown field, field from an inactive `provider` variant —
+     asserted by the checker; a schema that does not refuse these cannot merge on
+     valid examples and property names alone
 2. `test(schema): add config refusal mutations`
    - structural B1/B2/B3/B4 mutations, including malformed signed-assertion and
      `keys` union combinations
@@ -28,9 +32,10 @@ PROVISIONAL PHASES
 3. `feat(schema): add logical record schemas`
    - the six `schema/records/*.schema.json` files
    - state-dependent required and absent fields
-   - a valid and a refusal case for every state-dependent required/absent-field
-     branch in G5 and for every per-reason `grant_event` field branch; a state or
-     reason branch with no case cannot merge
+   - a valid case for every G5 state branch and every per-reason `grant_event`
+     branch, plus one refusal mutation per independently required or forbidden field
+     inside each branch (an approved `preapproval` alone carries several); a branch
+     or field with no case cannot merge
    - `tools/schema-check.py` mapping from each record case to its logical schema,
      with the expected pass or named-rule refusal asserted
    - bidirectional G2 record-field-to-schema drift check; this phase cannot merge
@@ -41,7 +46,7 @@ PROVISIONAL PHASES
    - coverage check that every checker-owned semantic rule has an executable
      phase-2 mutation and named-rule assertion
    - coverage check that every G5 state branch and `grant_event` reason branch has
-     a phase-3 valid and refusal case
+     a phase-3 valid case and a refusal per state-dependent field
    - final full-schema and mutation run
 
 Read first, fully: docs/contract-boundaries.md (B1–B8, every field and refusal rule —
@@ -74,7 +79,8 @@ DELIVERABLES
    `grant_request`, `preapproval`, `grant`, `authorization_code` (delta fields only),
    `grant_event`, `machine_tombstone`; state-dependent required/absent fields via
    `if/then`; RFC 3339 UTC 3-ms-digit timestamps as a pattern; snake_case only. Every
-   G5 state branch and every `grant_event` reason branch has a valid and a refusal case.
+   G5 state branch and every `grant_event` reason branch has a valid case and one
+   refusal per state-dependent field.
 4. `tools/schema-check.py` (stdlib + one pinned validator only if unavoidable — name
    the version and publish date): validates every `schema/valid/*` passes, every
    `schema/mutations/*` fails **for the named rule**, not merely fails, and every
