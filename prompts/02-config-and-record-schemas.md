@@ -19,11 +19,13 @@ PROVISIONAL PHASES
      `upstream.credential` type, each `egress.profiles` proxy form; a valid arm with
      no positive case cannot merge
    - the smallest `tools/schema-check.py` path that proves those examples pass
-   - bidirectional property-to-schema drift check over every B1 property, including
-     the ones nested inside a row's type cell (`upstream.credential.scheme`,
+   - bidirectional drift check over every B1 property, including the ones nested
+     inside a row's type cell (`upstream.credential.scheme`,
      `egress.profiles.<name>.caBundleRef`, the `grant.policy.rules[].when` members)
      and B4's `assertion` shape (B1 lists `identity.assertion` as one object; its
-     fields live in B4); this phase cannot merge with an omitted or invented property
+     fields live in B4): for each field, name, type, and required/optional per
+     variant must agree between the table and the schema, mechanically; this phase
+     cannot merge with an omitted, invented, mistyped, or wrongly required property
    - a starter refusal set in `schema/mutations/` — missing required field, wrong
      type, null required, unknown field, field from an inactive `provider` variant —
      asserted by the checker; a schema that does not refuse these cannot merge on
@@ -49,11 +51,13 @@ PROVISIONAL PHASES
      branch, or field with no case cannot merge
    - `tools/schema-check.py` mapping from each record case to its logical schema,
      with the expected pass or named-rule refusal asserted
-   - bidirectional G2 record-field-to-schema drift check; this phase cannot merge
-     with an omitted or invented property
+   - bidirectional G2 record-field-to-schema drift check: for each field, name,
+     required/absent per state, and the type G2/G3 assign must agree between the
+     table and the schema, mechanically; this phase cannot merge with an omitted,
+     invented, mistyped, or wrongly required property
 4. `test(schema): enforce contract-schema drift`
-   - rerun the B1-plus-B4 property-to-schema comparison in both directions
-   - rerun the G2 record-field-to-schema comparison in both directions
+   - rerun the B1-plus-B4 name/type/requiredness comparison in both directions
+   - rerun the G2 name/type/requiredness comparison in both directions
    - coverage check that every union arm has a phase-1 positive case
    - coverage check that every structural refusal rule in B1–B4 and every
      checker-owned semantic rule has an executable phase-2 mutation and named-rule
@@ -104,10 +108,11 @@ DELIVERABLES
    logical-record case is checked against its named schema for its expected result.
    Semantic rules JSON Schema cannot express are asserted here in Python.
 5. Drift checks: every B1 property, nested ones included, and every B4 `assertion`
-   field must map to a config-schema property and vice versa; every G2 record field
-   must map to its logical record schema and vice versa. Print
-   both diffs. Where a contract table and schema disagree, STOP and list it as a
-   contract gap — do not silently pick.
+   field must map to a config-schema property with the same type and requiredness,
+   and vice versa; every G2 record field must map to its logical record schema the
+   same way. The comparison is mechanical, per field — not a sample of examples.
+   Print both diffs. Where a contract table and schema disagree, STOP and list it as
+   a contract gap — do not silently pick.
 
 HARD RULES: one phase and one PR per run; touches only `schema/**`,
 `tools/schema-check.py`, and — only for gaps the owner asks you to fix — the B1 or G2
