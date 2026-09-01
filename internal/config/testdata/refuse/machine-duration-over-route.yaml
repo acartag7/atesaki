@@ -1,0 +1,60 @@
+# expect: B1.machine-duration
+# Rung 4: signed assertions from a fronting proxy, plus one declared machine client.
+apiVersion: atesaki/v1alpha1
+kind: Gateway
+metadata:
+  name: tools
+spec:
+  externalBaseUrl: https://tools.example.com
+  listen: "[::]:8443"
+  signingKeyRef: env:ATESAKI_SIGNING_KEY
+  allowedHosts: [tools.example.com]
+  allowedOrigins: [https://tools.example.com]
+  identity:
+    provider: header
+    assertion:
+      header: Cf-Access-Jwt-Assertion
+      issuer: https://example.cloudflareaccess.com
+      audience: 0123abcd
+      alg: RS256
+      keys: {jwksUrl: https://example.cloudflareaccess.com/cdn-cgi/access/certs, egressProfile: corp}
+      groupsClaim: groups
+    groupsToScopes:
+      platform: [grafana.read, grafana.write]
+  clients:
+    allowLoopbackRedirects: true
+    redirectAllowlist: [https://claude.ai/api/mcp/auth_callback]
+  egress:
+    profiles:
+      corp: {proxy: http://proxy.example.com:3128}
+      direct: {proxy: none}
+  store: {path: /var/lib/atesaki/store.db}
+  audit: {path: /var/log/atesaki/audit.jsonl}
+  machineClients:
+    - id: nightly-report
+      secretRef: env:NIGHTLY_REPORT_SECRET
+      purpose: Nightly usage report for the platform team
+      maxDuration: 86400
+      routes:
+        - {path: /grafana, scopes: [grafana.read]}
+---
+apiVersion: atesaki/v1alpha1
+kind: Route
+metadata:
+  name: grafana
+spec:
+  path: /grafana
+  upstream:
+    url: https://grafana.internal.example.com/api/mcp
+    egressProfile: direct
+    credential: {type: static-header, header: Authorization, scheme: Bearer, valueRef: env:GRAFANA_TOKEN}
+  scopes:
+    catalog: [grafana.read, grafana.write]
+  authz: {requireScope: grafana.read}
+  grant:
+    maxDuration: 28800
+    policy:
+      rules:
+        - effect: allow
+          when: {scopesSubsetOf: [grafana.read]}
+    approvers: [platform-admins]

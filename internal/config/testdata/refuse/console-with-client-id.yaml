@@ -1,0 +1,40 @@
+# expect: B1.inactive-variant
+# Console pairing on loopback: the five-minute first run, no IdP.
+apiVersion: atesaki/v1alpha1
+kind: Gateway
+metadata:
+  name: tutorial
+spec:
+  externalBaseUrl: http://127.0.0.1:8080
+  listen: 127.0.0.1:8080
+  signingKeyRef: env:ATESAKI_SIGNING_KEY
+  allowedHosts: ["127.0.0.1:8080"]
+  allowedOrigins: ["http://127.0.0.1:8080"]
+  identity:
+    provider: console
+    clientId: x
+  egress:
+    profiles:
+      direct: {proxy: none}
+  store: {path: /var/lib/atesaki/store.db}
+  audit: {path: /var/log/atesaki/audit.jsonl}
+---
+apiVersion: atesaki/v1alpha1
+kind: Route
+metadata:
+  name: playbook
+spec:
+  path: /playbook
+  upstream:
+    url: http://127.0.0.1:9000/mcp
+    egressProfile: direct
+    credential: {type: none}
+  scopes:
+    catalog: [playbook.read]
+    default: [playbook.read]
+  authz: {requireScope: playbook.read}
+  grant:
+    policy:
+      rules:
+        - effect: allow
+          when: {scopesSubsetOf: [playbook.read]}
