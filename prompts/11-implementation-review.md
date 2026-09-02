@@ -1,50 +1,15 @@
-MODEL: claude-opus-class or fable   EFFORT: xhigh   TOOL: Claude Code or Codex CLI, fresh session, on the PR branch
-WHY: every implementation PR gets an adversarial review by a reviewer with clean
-context. Report everything, with confidence — conservative prompts suppress recall.
-Read-only against the repo; verification runs happen in a throwaway clone or worktree,
-where reverting a fix locally is expected and destroys nothing. Pin and report the
-exact PR head SHA reviewed.
+MODEL: claude-opus-class or fable   EFFORT: xhigh   TOOL: Claude Code or Codex CLI, fresh session, on the PR branch WHY: every implementation PR gets an adversarial review by a reviewer with clean context. Report everything, with confidence, conservative prompts suppress recall. Read-only against the repo; verification runs happen in a throwaway clone or worktree, where reverting a fix locally is expected and destroys nothing. Pin and report the exact PR head SHA reviewed.
 
-Read first, fully: the PR diff · the contract clauses **derived from the diff, call
-graph, fixture directory, and siblings — never only what the PR description claims** ·
-the locked fixtures it claims to pass · docs/deltas.md · docs/threat-model.md ·
-docs/negative-matrix.md · prompts/README.md conventions.
+Read first, fully: the PR diff · the contract clauses **derived from the diff, call graph, fixture directory, and siblings, never only what the PR description claims** · the locked fixtures it claims to pass · docs/deltas.md · docs/threat-model.md · docs/negative-matrix.md · prompts/README.md conventions.
 
 CHECK, in this order:
-1. **Scope**: did the PR touch a contract page or locked fixture without the owner
-   decision required by `prompts/README.md`? If yes, record it as the first finding
-   and **continue the full review**. Report everything; a scope finding does not excuse
-   skipping the sibling sweep.
-2. **Claims vs code**: for every "passes fixture X" claim, run it; for every "never"
-   the PR touches, find the enforcing code path and the test that fails without it.
-   Revert the fix locally and confirm the regression test goes red — a test that
-   passes either way pins nothing.
-3. **Fail-closed sweep**: every exit path × every piece of mutable state in each
-   touched function (except / else / early return); empty string == missing config;
-   no `value || default` on a security selector; unknown = deny in every parser and
-   rule loader; caps before parse; timing-safe compares; no secrets in logs, errors,
-   claims, or audit; `O_NOFOLLOW`, explicit modes.
-4. **Siblings**: the same defect class in the mirror path — every identity port, every
-   store adapter, every G6 row of the same shape, every verb. Report the full set.
-5. **Test diffs with more suspicion than code diffs**: weakened asserts, mocked-away
-   subjects, fixture strings special-cased, "any error" accepted as the check.
-6. **Invented APIs**: grep every external symbol against the dependency source at the
-   pinned version. Dependencies: pinned exact, lockfile committed, aged per the repo's
-   cooldown policy as written in the target repo's policy file (assume no number;
-   mcp-sso: 15) — advisory-driven
-   exceptions recorded with the GHSA/CVE id.
-6b. **Process closure**: fetch review threads with pagination (unpaginated fetches
-   drop older rounds); the PR needs an actual review object or explicit approval — an
-   emoji is not a review; where the PR ships an entrypoint, test the shipped
-   entrypoint, not `dist/` directly.
-7. **Contract gaps** the implementer reported: are they real gaps, or did the
-   implementer avoid a rule that is actually written? Cite the sentence.
-8. **Concurrency and partial failure** for any G6 row touched: two runners, crash
-   between preflight and commit, crash after commit before response.
+1. **Scope**: did the PR touch a contract page or locked fixture without the owner decision required by `prompts/README.md`? If yes, record it as the first finding and **continue the full review**. Report everything; a scope finding does not excuse skipping the sibling sweep.
+2. **Claims vs code**: for every "passes fixture X" claim, run it; for every "never" the PR touches, find the enforcing code path and the test that fails without it. Revert the fix locally and confirm the regression test goes red, a test that passes either way pins nothing.
+3. **Fail-closed sweep**: every exit path × every piece of mutable state in each touched function (except / else / early return); empty string == missing config; no `value || default` on a security selector; unknown = deny in every parser and rule loader; caps before parse; timing-safe compares; no secrets in logs, errors, claims, or audit; `O_NOFOLLOW`, explicit modes.
+4. **Siblings**: the same defect class in the mirror path, every identity port, every store adapter, every G6 row of the same shape, every verb. Report the full set.
+5. **Test diffs with more suspicion than code diffs**: weakened asserts, mocked-away subjects, fixture strings special-cased, "any error" accepted as the check.
+6. **Invented APIs**: grep every external symbol against the dependency source at the pinned version. Dependencies: pinned exact, lockfile committed, aged per the repo's cooldown policy as written in the target repo's policy file (assume no number; mcp-sso: 15), advisory-driven exceptions recorded with the GHSA/CVE id. 6b. **Process closure**: fetch review threads with pagination (unpaginated fetches drop older rounds); the PR needs an actual review object or explicit approval, an emoji is not a review; where the PR ships an entrypoint, test the shipped entrypoint, not `dist/` directly.
+7. **Contract gaps** the implementer reported: are they real gaps, or did the implementer avoid a rule that is actually written? Cite the sentence.
+8. **Concurrency and partial failure** for any G6 row touched: two runners, crash between preflight and commit, crash after commit before response.
 
-OUTPUT (disclosure format, ranked by consequence, mechanical vs design separated):
-per finding — what it is · what actually happens (actor + sequence) · if not fixed,
-who can do what · where it already works (the sibling that got it right) ·
-recommendation with reasoning · confidence. Then: what was DISPROVED (attacks that
-failed, claims that held), and what is genuinely good. A PR is not done until every
-finding is fixed in one pass and this review is re-run clean.
+OUTPUT (disclosure format, ranked by consequence, mechanical vs design separated): per finding: what it is · what actually happens (actor + sequence) · if not fixed, who can do what · where it already works (the sibling that got it right) · recommendation with reasoning · confidence. Then: what was DISPROVED (attacks that failed, claims that held), and what is genuinely good. A PR is not done until every finding is fixed in one pass and this review is re-run clean.

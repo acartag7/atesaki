@@ -1,9 +1,6 @@
-# Decisions ledger — the receipts behind every `[O]` tag
+# Decisions ledger: the receipts behind every `[O]` tag
 
-Every `[O:date]` in the contract set points at a row here. "Receipt" says *how* Arnold
-decided: **picker** = an explicit choice in the design session's decision prompt on
-that date; **words** = Arnold's own sentence, quoted or paraphrased; **PR** = recorded
-as an owner comment on the named PR. A tag without a row here is a defect.
+Every `[O:date]` in the contract set points at a row here. "Receipt" says how Arnold decided. *Picker* means an explicit choice in the design session's decision prompt on that date. *Words* means Arnold's own sentence, quoted or paraphrased. *PR* means it was recorded as an owner comment on the named PR. A tag without a row here is a defect.
 
 | Date | Decision | Receipt |
 | --- | --- | --- |
@@ -34,18 +31,18 @@ as an owner comment on the named PR. A tag without a row here is a defect.
 | 2026-08-31 | Two routes may share one upstream | picker |
 | 2026-08-31 | Agent sends `purpose` / `requested_duration` in the authorize request | picker |
 | 2026-08-31 | Decider outage → `temporarily_unavailable` | picker |
-| 2026-08-31 | ~~§19 anchor keys: bijective base-26 `[a-z]+`~~ **SUPERSEDED the same day** — see the §19 simplification row | picker → PR #338 comment |
+| 2026-08-31 | ~~§19 anchor keys: bijective base-26 `[a-z]+`~~ SUPERSEDED the same day; see the §19 simplification row | picker → PR #338 comment |
 | 2026-08-31 | Machine revocation is sticky (tombstone bound to declaration digest) | picker |
 | 2026-08-31 | Grant clock starts at activation (code exchange) | picker |
 | 2026-08-31 | Approval hash = what-to-whom only (no transport context) | picker |
 | 2026-08-31 | Consent denial consumes the consent token | picker |
 | 2026-08-31 | Machine clients: `deny` rules apply + boot contradiction check | picker (after explanation; Arnold: "explain me this better because i may go to 2") |
 | 2026-08-31 | Sign before commit (G8); replaces the reference's burn→sign→store order | picker |
-| 2026-08-31 | Audit: two durability classes — durable grant events, best-effort flow events (G12) | picker |
+| 2026-08-31 | Audit: two durability classes, durable grant events and best-effort flow events (G12) | picker |
 | 2026-08-31 | Rung 4 = generic signed-JWT assertion profile (B4) | picker |
 | 2026-08-31 | Bundle: deny overrides allow; console may use loopback http; sweeper 60 s / pairing 10 min / approval window 24 h / request-target 8 KiB; claim-time freshness re-check; externalBaseUrl origin-only; no assertion replay cache in v0 | picker ("Confirm all six") |
 | 2026-08-31 | Remaining B8 numbers (pending caps 3 / 10 000, retention 30 d, hops 10, JWKS 64 KiB / 32 keys, stale 24 h, assertion 8 KiB, groups 128 × 256 B) and total-pending-cap → `temporarily_unavailable` | picker ("Confirm all") |
-| 2026-08-31 | ~~mcp-sso §19: prose is the only rule-carrier; fenced-block CI ban~~ **SUPERSEDED the same day** — see the §19 simplification row | picker → PR #338 comment |
-| 2026-08-31 | **§19 simplification:** coverage counted by existing clause number, not by sentence; anchors, marker-word selector, fenced-block ban, and the "fail closed" spelling question cancelled; runner next | words ("are you putting rules based on words? This is plain stupid! I said that I don't want this complications") + picker → PR #338 and #339 comments |
-| 2026-08-31 | Portable §8.4 fixture via the existing RE2 matcher accepting both documented metadata locations; host 8.4 unchanged, **frozen only once the runner passes it** — a receipt cannot precede a runner; no new assertion model | picker → PR #338 comment |
+| 2026-08-31 | ~~mcp-sso §19: prose is the only rule-carrier; fenced-block CI ban~~ SUPERSEDED the same day; see the §19 simplification row | picker → PR #338 comment |
+| 2026-08-31 | §19 simplification: coverage counted by existing clause number, not by sentence; anchors, marker-word selector, fenced-block ban, and the "fail closed" spelling question cancelled; runner next | words ("are you putting rules based on words? This is plain stupid! I said that I don't want this complications") + picker → PR #338 and #339 comments |
+| 2026-08-31 | Portable §8.4 fixture via the existing RE2 matcher accepting both documented metadata locations; host 8.4 unchanged, frozen only once the runner passes it (a receipt cannot precede a runner); no new assertion model | picker → PR #338 comment |
 | 2026-09-01 | Contract mismatches trigger a concrete proposal and owner discussion; the owner chooses the current focused PR or a smaller linked PR; no automated contract gate | words ("this should be embedded everywhere"; "do not stop"; update the PR or split it) + Atesaki PR #1 withdrawal |

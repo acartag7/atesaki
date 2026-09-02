@@ -1,108 +1,30 @@
-MODEL: gpt-5.6-sol   EFFORT: xhigh   TOOL: Codex CLI in ~/project/atesaki-core
-MILESTONE: M1 residuals (docs/roadmap.md). RESCOPED 2026-09-02 under open question
-#54 — the earlier JSON-Schema-plus-Python version of this packet is in git history
-(`00ed981`) and is not dispatched. PRECONDITION: #54 ruled as proposed (phases 1 and
-2); packet 14 item 3 (#56) landed in the contract (phase 3 — it does not block M2).
-If #54 is ruled the other way, STOP and report; the old packet is the fallback.
-WHY: the Go validator merged (PR 5, PR 6) with a 71-case refusal suite that names the
-rule per case — that suite is the mutation suite. What is still missing is the
-mechanical proof that B1 and the parser agree field by field, and the G2 record types
-the fixture profile (packet 03) needs for `given.state`/`then.state`. Two validators
-for one input would be the parser-differential class; one source (Go) with generated
-artifacts is not.
+MODEL: gpt-5.6-sol   EFFORT: xhigh   TOOL: Codex CLI in ~/project/atesaki-core MILESTONE: M1 residuals (docs/roadmap.md). RESCOPED 2026-09-02 under open question #54: the earlier JSON-Schema-plus-Python version of this packet is in git history (`00ed981`) and is not dispatched. PRECONDITION: #54 ruled as proposed (phases 1 and 2); packet 14 item 3 (#56) landed in the contract (phase 3, it does not block M2). If #54 is ruled the other way, STOP and report; the old packet is the fallback. WHY: the Go validator merged (PR 5, PR 6) with a 71-case refusal suite that names the rule per case, that suite is the mutation suite. What is still missing is the mechanical proof that B1 and the parser agree field by field, and the G2 record types the fixture profile (packet 03) needs for `given.state`/`then.state`. Two validators for one input would be the parser-differential class; one source (Go) with generated artifacts is not.
 
-RUN MODE: serial phases, one PR per run. On each fresh run fetch `origin/main`,
-inspect which phases merged, implement only the first incomplete phase, open one
-self-explanatory PR, verify it, stop. Never stack phases.
+RUN MODE: serial phases, one PR per run. On each fresh run fetch `origin/main`, inspect which phases merged, implement only the first incomplete phase, open one self-explanatory PR, verify it, stop. Never stack phases.
 
-Read first, fully: docs/contract-boundaries.md B1 (every row, nested fields inside
-type cells included), B2, B4 (the `assertion` object's fields) · docs/contract-grants.md
-G2, G5, G6 (the columns that set fields), G12 · docs/deltas.md D8 · internal/config/**
-(reader.go's accessors are where the registry hooks in; types.go; parse.go) ·
-docs/open-questions.md #54, #56 · seed/atesaki.schema.json (evidence only; stale shapes).
+Read first, fully: docs/contract-boundaries.md B1 (every row, nested fields inside type cells included), B2, B4 (the `assertion` object's fields) · docs/contract-grants.md G2, G5, G6 (the columns that set fields), G12 · docs/deltas.md D8 · internal/config/** (reader.go's accessors are where the registry hooks in; types.go; parse.go) · docs/open-questions.md #54, #56 · seed/atesaki.schema.json (evidence only; stale shapes).
 
-PHASE 1 — `test(config): B1 to parser drift check`
-- The parser records every field path it accepts as it reads: dotted paths, `[]` for
-  list elements, `<name>` for map keys (`spec.egress.profiles.<name>.caBundleRef`,
-  `spec.machineClients[].routes[].scopes[]`), plus the type class the accessor used
-  (`string`, `integer`, `boolean`, `list`, `mapping`, `ref`, `url`, `path`,
-  `duration`, `union:<tag>`) and requiredness as observed: required, optional, or
-  per-variant (`entra`/`oidc`/`header`/`console`; credential `type`; `keys` arm).
-  Registration happens at **accessor-call time, present or absent** — the parser
-  calls `o.str("x", false)` for every optional field it knows, so an optional field
-  no example uses is still registered. The registry is produced by parsing the three
-  valid examples plus one synthetic document per union arm so every variant branch
-  executes; a B1 row under a variant that the registry lacks is reported as a
-  B1→parser miss, which is also how an unexecuted branch shows up.
-- The test parses B1's two tables and B4's `assertion` shape from
-  `docs/contract-boundaries.md` (markdown rows `| field | type | rule |`; nested
-  fields written inside the type cell as `{a, b?, c}` — state the parsing rules in the
-  test file's header comment) into the same path/type/requiredness triples.
-- Compare both directions; print both diffs. The parser→B1 direction **fails** (an
-  undocumented accepted field is a defect). The B1→parser direction is a **pending
-  list**: printed on every run, allowed to be non-empty while a contract-first PR
-  has added a field the code does not read yet and while a slice's fixtures are merged ahead of its code, and
-  required empty at each slice's completion (the slice's first, fixture-driven
-  configuration PR closes it) — the test takes the list of currently accepted gaps
-  from `internal/config/testdata/pending-b1.txt`, which the slice-completion review
-  must empty. Where the table and the parser disagree on a field both know, STOP
-  and list it as a contract gap in the PR — never pick a side in code.
+PHASE 1: `test(config): B1 to parser drift check`
+- The parser records every field path it accepts as it reads: dotted paths, `[]` for list elements, `<name>` for map keys (`spec.egress.profiles.<name>.caBundleRef`, `spec.machineClients[].routes[].scopes[]`), plus the type class the accessor used (`string`, `integer`, `boolean`, `list`, `mapping`, `ref`, `url`, `path`, `duration`, `union:<tag>`) and requiredness as observed: required, optional, or per-variant (`entra`/`oidc`/`header`/`console`; credential `type`; `keys` arm). Registration happens at **accessor-call time, present or absent**. The parser calls `o.str("x", false)` for every optional field it knows, so an optional field no example uses is still registered. The registry is produced by parsing the three valid examples plus one synthetic document per union arm so every variant branch executes; a B1 row under a variant that the registry lacks is reported as a B1→parser miss, which is also how an unexecuted branch shows up.
+- The test parses B1's two tables and B4's `assertion` shape from `docs/contract-boundaries.md` (markdown rows `| field | type | rule |`; nested fields written inside the type cell as `{a, b?, c}`, state the parsing rules in the test file's header comment) into the same path/type/requiredness triples.
+- Compare both directions; print both diffs. The parser→B1 direction **fails** (an undocumented accepted field is a defect). The B1→parser direction is a **pending list**: printed on every run, allowed to be non-empty while a contract-first PR has added a field the code does not read yet and while a slice's fixtures are merged ahead of its code, and required empty at each slice's completion (the slice's first, fixture-driven configuration PR closes it), the test takes the list of currently accepted gaps from `internal/config/testdata/pending-b1.txt`, which the slice-completion review must empty. Where the table and the parser disagree on a field both know, STOP and list it as a contract gap in the PR, never pick a side in code.
 - Done when the parser→B1 diff is empty and every B1→parser gap is listed.
 
-PHASE 2a — `feat(config): machineClients is unknown in v0` (only if #67 defers
-machine clients; runs before phase 2 either way once #67 is ruled)
-- `machineClients[]` becomes an unknown field (`B1.unknown-field`), the machine
-  branch of the G7 boot contradiction check is retired, the valid example
-  `header-assertion-machine-client.yaml` loses its machine block (rung 4 stays), the
-  machine refusal cases move to `testdata/deferred/` with a note, and the types drop
-  the machine shapes. Sweep every sibling in the same PR: `internal/config/types.go`,
-  `parse.go`, `validate.go`, the three examples, the refusal suite. The contract
-  side (G10, A12, A13, D10a–D10c, B1 row, B7 reasons, G5 states, onboarding step 9)
-  is packet 14 item 18, which lands first.
+PHASE 2a: `feat(config): machineClients is unknown in v0` (only if #67 defers machine clients; runs before phase 2 either way once #67 is ruled)
+- `machineClients[]` becomes an unknown field (`B1.unknown-field`), the machine branch of the G7 boot contradiction check is retired, the valid example `header-assertion-machine-client.yaml` loses its machine block (rung 4 stays), the machine refusal cases move to `testdata/deferred/` with a note, and the types drop the machine shapes. Sweep every sibling in the same PR: `internal/config/types.go`, `parse.go`, `validate.go`, the three examples, the refusal suite. The contract side (G10, A12, A13, D10a–D10c, B1 row, B7 reasons, G5 states, onboarding step 9) is packet 14 item 18, which lands first.
 
-PHASE 2 — `feat(records): G2 record types and generated schemas` (after #67 is
-ruled, so the record shapes are the v0 shapes)
-- `internal/records`: one Go type per G2 record — `grant_request`, `preapproval`,
-  `grant`, the `authorization_code` delta fields, `grant_event`, `machine_tombstone`.
-  Make illegal states unrepresentable: `state` is a closed enum; fields G6 sets only in
-  a given state live in that state's variant (e.g. `grant`'s `active` variant owns
-  `activated_at`, `grant_expires_at`, `family_id`), not as pointers on a flat struct.
-  A projection function flattens a record to the logical `snake_case` form the runner
-  compares in `then.state` (optional = omitted, never null). Timestamps: RFC 3339
-  UTC, exactly 3 ms digits, one formatter.
-- A generator writes `schema/records/<record>.schema.json` (JSON Schema 2020-12,
-  `if/then` per state, `additionalProperties: false`) from the Go types; a golden test
-  fails when the committed file differs from the generated one — the types are the
-  source, the files are artifacts the fixture profile consumes.
-- Mutation suite in Go, per record: one positive case per G5 state branch and per
-  `grant_event` reason branch; one refusal per unconditional required field (missing)
-  and per typed field (wrong type); one refusal per state-dependent required or
-  forbidden field inside each branch (an approved `preapproval` alone carries several).
-  Each case is validated against the generated schema by a small pinned JSON Schema
-  library (name it, version, publish date, age) or by the projection's own decoder
-  if no dependency is needed — state which and why.
-- G2↔types drift test: parse G2's record paragraphs (field lists with `?` marking
-  optional) and compare with the types' registered fields both ways; then, for every
-  `?` field, the state variant that owns it in the types must match a G6 row that
-  sets it in that state (parse the G6 mutation column); a field owned by a state no
-  row sets, or set by a row in a state that does not own it, fails. Empty or fail.
+PHASE 2: `feat(records): G2 record types and generated schemas` (after #67 is ruled, so the record shapes are the v0 shapes)
+- `internal/records`: one Go type per G2 record, `grant_request`, `preapproval`, `grant`, the `authorization_code` delta fields, `grant_event`, `machine_tombstone`. Make illegal states unrepresentable: `state` is a closed enum; fields G6 sets only in a given state live in that state's variant (e.g. `grant`'s `active` variant owns `activated_at`, `grant_expires_at`, `family_id`), not as pointers on a flat struct. A projection function flattens a record to the logical `snake_case` form the runner compares in `then.state` (optional = omitted, never null). Timestamps: RFC 3339 UTC, exactly 3 ms digits, one formatter.
+- A generator writes `schema/records/<record>.schema.json` (JSON Schema 2020-12, `if/then` per state, `additionalProperties: false`) from the Go types; a golden test fails when the committed file differs from the generated one, the types are the source, the files are artifacts the fixture profile consumes.
+- Mutation suite in Go, per record: one positive case per G5 state branch and per `grant_event` reason branch; one refusal per unconditional required field (missing) and per typed field (wrong type); one refusal per state-dependent required or forbidden field inside each branch (an approved `preapproval` alone carries several). Each case is validated against the generated schema by a small pinned JSON Schema library (name it, version, publish date, age) or by the projection's own decoder if no dependency is needed, state which and why.
+- G2↔types drift test: parse G2's record paragraphs (field lists with `?` marking optional) and compare with the types' registered fields both ways; then, for every `?` field, the state variant that owns it in the types must match a G6 row that sets it in that state (parse the G6 mutation column); a field owned by a state no row sets, or set by a row in a state that does not own it, fails. Empty or fail.
 
-PHASE 3 — `feat(config): knownCimd entries are references` (after packet 14 item 3)
-- `clients.knownCimd[]` entries parse as B2 references: `env:NAME` holds the document
-  text; `file:PATH` follows the B2 file invariants (already implemented for secrets).
-  Refusals name the reference, never the content. Whether the content is a valid CIMD
-  document stays deferred to slice 2's CIMD validator, as PR 5 stated.
-- Refusal cases: bare path (no scheme), unknown scheme, missing env, env blank, file
-  invariants — one file each under `testdata/refuse/`, `# expect:` naming the B2 rule.
+PHASE 3: `feat(config): knownCimd entries are references` (after packet 14 item 3)
+- `clients.knownCimd[]` entries parse as B2 references: `env:NAME` holds the document text; `file:PATH` follows the B2 file invariants (already implemented for secrets). Refusals name the reference, never the content. Whether the content is a valid CIMD document stays deferred to slice 2's CIMD validator, as PR 5 stated.
+- Refusal cases: bare path (no scheme), unknown scheme, missing env, env blank, file invariants, one file each under `testdata/refuse/`, `# expect:` naming the B2 rule.
 
-HARD RULES: no config JSON Schema is written (#54); `seed/atesaki.schema.json` is
-evidence, never copied; touches only `internal/config/**`, `internal/records/**`,
-`schema/records/**`, and — only for gaps the owner asks you to fix — the B1 or G2
-source section with a one-line reason per change; one phase per run.
+HARD RULES: no config JSON Schema is written (#54); `seed/atesaki.schema.json` is evidence, never copied; touches only `internal/config/**`, `internal/records/**`, `schema/records/**`, and, only for gaps the owner asks you to fix, the B1 or G2 source section with a one-line reason per change; one phase per run.
 
-DONE WHEN: phase 1 diffs empty; phase 2 golden and mutation tests green and the G2
-diff empty; phase 3 refusals green; `go test -race ./...` green; lint green.
+DONE WHEN: phase 1 diffs empty; phase 2 golden and mutation tests green and the G2 diff empty; phase 3 refusals green; `go test -race ./...` green; lint green.
 
-REPORT EACH RUN: phase and PR; head SHA; the drift diffs as printed; every B1/G2
-sentence the parser or types could not honor as written; positive-case counts per
-union arm and per state branch.
+REPORT EACH RUN: phase and PR; head SHA; the drift diffs as printed; every B1/G2 sentence the parser or types could not honor as written; positive-case counts per union arm and per state branch.
