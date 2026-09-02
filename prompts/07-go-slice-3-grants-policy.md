@@ -39,8 +39,9 @@ SCOPE — serial PRs, one behavior each, in this order:
    and before expiry; the first-issuance race: a losing insert on the one-active-per-
    (client, resource) uniqueness rolls back, discards its signed token, retries once
    as reuse; D10b claims; A13 tombstone on revoke (state `active` or `expired`).
-5. `feat(grants): sweeper and retention A14, A15` — 60 s interval (B8); the lazy
-   path on every operation touching a past-due row; exactly one event per expiry;
+5. `feat(grants): sweeper and retention A14, A15` — 60 s interval (B8) over every
+   row kind; the lazy path exists since slice 2 and is extended to every operation
+   this slice adds; exactly one event per expiry;
    retention purge after 30 days (B8), idempotent, a `grant` only after its codes
    and family expired; `grant_event` rows never purged; flow `retention_purged` with
    count and oldest terminal timestamp.

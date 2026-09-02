@@ -27,9 +27,15 @@ the same spine, additionally accepting:
   §-clauses of mcp-sso where a fixture pins an inherited rule;
 - `given.config` as the Atesaki YAML stream, as a string — the Go runner validates it
   with the real parser (no config JSON Schema exists, #54); `given.env` for `env:`
-  references (sentinels); `given.files` for B2 boot fixtures: paths, modes, owners
-  (`self`/`other`), symlink and hard-link flags, sizes — a filesystem materialization
-  the runner builds in a temp dir;
+  references (sentinels); `given.files` for B2 boot fixtures under a **containment
+  contract** written into the schema: paths are relative, one segment grammar, no
+  `.`/`..`/absolute/empty segments; symlink and hard-link targets must resolve inside
+  the materialization root; modes as octal strings; sizes bounded (per-file and total
+  byte caps, file-count cap); **no ownership simulation** (`owner: other` is not
+  expressible — the owner-mismatch rule is proven by a Go unit test with an injected
+  stat, recorded as `suite` evidence); the runner materializes under `os.Root` and
+  refuses any fixture that violates the grammar before touching the disk (the corpus
+  is supply-chain input; a hostile fixture must not become a file-write primitive);
 - `given.state`/`then.state` over the Atesaki logical records validated against
   `schema/records/*` plus the inherited mcp-sso records;
 - `then.events` over the B7 reason set with its D/F class; durable events also appear
@@ -40,13 +46,19 @@ the same spine, additionally accepting:
   needed, and say why.
 The profile ships its own mutation suite: an mcp-sso-shaped config, an unknown clause
 id, an unknown record field, an unknown reason code, a reason with the wrong class,
-a chain with a gap — each REJECTED, named. A contract artifact of THIS repo; the
+a chain with a gap, a `given.files` path with `..`, an absolute path, a link target
+outside the root — each REJECTED, named. A contract artifact of THIS repo; the
 mcp-sso schema is never edited. `fixtures/MANIFEST.json` + `CATALOGUE.md` generation
 with clause-level coverage: every numbered clause / never / operation row in
-contract.md §4, §6, §12, contract-grants.md G1–G14 (each A/E row separately),
-contract-boundaries.md B2–B7, and every deltas.md row maps to ≥1 fixture id or is
-listed uncovered. Hashes of `locked` fixtures; the runner (packet 05) fails on a
-mismatch or a skip.
+contract.md §4, §6, §9 (verbs), §12, contract-grants.md G1–G14 (each A/E row
+separately), contract-boundaries.md **B1–B8** (B1 rows point at the config refusal
+suite as `suite` evidence; every B8 number has a fixture that exercises its exact
+boundary), and every deltas.md row maps to ≥1 fixture id or is listed uncovered. A
+fixture may carry `inherited: <mcp-sso clause>` when it pins an inherited sentence
+that has no frozen upstream portable fixture yet; it is superseded when the upstream
+one freezes, and until then it is what makes "inherited" mean "tested". Hashes of
+`locked` fixtures; the runner (packet 05) verifies them before materializing anything
+and fails on a mismatch or a skip.
 
 PHASE 1 — SLICE-1 FIXTURES (M3), `profile: portable`, sentinels only, every outbound
 call recorded:
@@ -59,17 +71,24 @@ call recorded:
    be dropped); upstream 401/403 with a challenge; SSE streamed unbuffered with a
    client disconnect cancelling the upstream; buffered POST completing (the cancel
    binding regression); query-only passthrough; top-level JSON array refused;
-   `Transfer-Encoding` plus `Content-Length` → `400`.
+   `Transfer-Encoding: chunked` beside `Content-Length` → the observable Go's parser
+   produces (chunked honored, length dropped) — pinned, not wished away.
 3. Boundaries: B3 host grammar accept/refuse pairs; inbound target — absolute-form
    with mismatched authority → `400`, encoded separators not routed, double-encoding
    not routed, dot segments not routed; B5 caps (`413`, `414`, `431`, `429` with
    `Retry-After`); B6 forwarded walk (trusted/untrusted peer, hop cap, malformed entry
-   → `400`, duplicate `Host` → `400`, HTTP/2 `:authority` vs `Host` mismatch → `400`);
-   B7 every row the relay side reaches, exact status and code.
+   → `400`, duplicate HTTP/1.1 `Host` → `400` — refused by Go's parser before any
+   handler, so the fixture asserts the status and **no** audit event, and the
+   negative-matrix row cites the parser; HTTP/2 `Host` beside `:authority` with a
+   different value → `400`); header count over B8 → `431`; B7 every row the relay
+   side reaches, exact status and code.
 4. Verifier and discovery: per-route PRM at the path-inserted location and the
    challenge pointing at it (D1); origin AS metadata documents; `iss`/`aud`/`exp`/
-   `scope` refusals with the non-oracular shape; duplicate `Authorization` (the §8.4
-   portable fixture stays mcp-sso's — do not duplicate it; cite its id).
+   `scope` refusals with the non-oracular shape; `alg` in the token ≠ the configured
+   algorithm, or a key of the wrong type → refused; duplicate `Authorization` (the
+   §8.4 portable fixture stays mcp-sso's — do not duplicate it; cite its id); an
+   `inherited` fixture for every §7 token clause the verifier implements that has no
+   frozen upstream fixture; `livez`/`readyz` and the drain per #61 as ruled.
 5. `boot` kind: B2 file invariants via `given.files` (symlink, hard link, wrong owner,
    group-readable, group-writable parent, oversize); console loopback refusals; every
    B1 refusal already covered by `internal/config/testdata` is NOT re-fixtured — the
@@ -82,15 +101,21 @@ rung 4: duplicate assertion header, unsigned header, wrong `kid`, stale JWKS bey
 the interval, identity headers stripped on non-identity paths, bounded refetch #58);
 never 6 (dedicated rung whose IdP rejects the redirect: the IdP error surfaces, no
 fallback); the scope-ceiling delta (#53: Codex-shaped union request on two routes);
-`clientOriginIn` (#57); live CIMD fetch guards if #5 allowed; D1, D3, D4, D5's allow
-branch, D6, D7, D11, D12, D13; operation rows A1, A2, A3 (insert), A3′, A3″, A7, A8,
-A9, A9′ (consumed on binding failure, not on wrong `resource`), A10, A10′ (replay
-revokes grant and family), A10″, A11 via RFC 7009, A14 lazy expiry for these rows,
-E1–E3; identity-failure pairs per §19.2 (rejection vs port throw) for every identity
-path; Entra groups overage → empty ceiling, no outbound call.
+`clientOriginIn` (#57); live CIMD fetch if #5 allowed: origin not on the allowlist
+refused before any network call, the inherited caps cited by clause; the limiter-
+outage delta (#60); D1, D3, D4, D5's allow branch, D6, D7, D11, D12, D13; operation
+rows A1, A2, A3 (insert), A3′, A3″, A7, A8, A9, A9′ (consumed on binding failure, not
+on wrong `resource`), A10, A10′ (replay revokes grant and family), A10″, A11 via RFC
+7009, A14's lazy transitions inside A3's cap/dedupe read and inside A9/A10, E1–E3;
+identity-failure pairs per §19.2 (rejection vs port throw) for every identity path;
+Entra groups overage → the inherited identity refusal with its reason, no outbound
+call; a display name as a `groupsToScopes` key → boot refusal; an `inherited` fixture
+for every §17 identity clause this slice implements that has no frozen upstream
+fixture.
 
-PHASE 3 — SLICE-3 FIXTURES (M5): A4, A5 (authority per packet 12: unauthorized OS
-user refused per verb; self-approval refused where checkable), A6 (two-runner claim
+PHASE 3 — SLICE-3 FIXTURES (M5): the packet-12 fixtures by their stated intent (A4,
+A5 authority: unauthorized OS user refused per verb; self-approval refused where
+checkable; the named residual documented, not tested away), A6 (two-runner claim
 race as a `suite` receipt with a barrier), A6a, A6b (freshness → invalidated), A12
 (first-issuance race, reuse, digest mismatch, tombstone, deny rule, scope outside
 declaration), A13, A14 sweeper, A15 purge idempotence; never 8 as the matrix written

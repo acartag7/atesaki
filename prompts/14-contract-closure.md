@@ -32,19 +32,24 @@ the rule needs are listed in the PR (packet 03 writes them):
    - If the ruling is the fallback (omit `scopes_supported`), write that instead and
      record the re-probe as a packet-06 verification step.
 2. `docs(contract): opt-in live CIMD fetch` (#5, as ruled)
-   - B1: `clients.cimd.liveFetch: {egressProfile}` (absent = vendored only); B5: a
+   - B1: `clients.cimd.liveFetch: {egressProfile, allowedOrigins[]}` (absent =
+     vendored only; origins exact `https`, B3 host grammar, never patterns); B5: a
      CIMD document cap row; B8: the number (needs the owner's "ok"); contract.md §8
-     rewritten; the inherited guarded-fetch clauses cited by mcp-sso section, not
-     reworded; threat-model row (SSRF via a client-supplied document URL: `https`
-     only, no redirects, private and loopback ranges refused after resolution,
-     through the named profile).
+     rewritten; the inherited guarded-fetch clauses cited by mcp-sso §17.1.5, not
+     reworded, with the one stated difference as a `deltas.md` row: the reference
+     dials a validated address directly and forbids a proxy; Atesaki refuses any
+     origin not on the allowlist before a network call, then uses the named profile
+     (validated-IP dial when direct; the allowlist is the SSRF control when proxied);
+     threat-model row for a client-supplied document URL.
    - If ruled vendored-only: onboarding.md loses "no pre-provisioning" for CIMD
      clients and says what the operator collects, per client.
 3. `docs(contract): knownCimd entries are references` (#56)
-   - B1 row: `[ref]` (B2); B2: `env:` for a document is a JSON string; recipe
-     obligations for Kubernetes go into contract.md §14 as one paragraph (secrets, CA
-     bundles, CIMD documents as `env:`; `file:` only where the runtime user owns a
-     `0600` regular file; store path is a subdirectory Atesaki creates).
+   - B1 row: `[ref]` (B2); B2: `env:` for a document is a JSON string. `caBundleRef`
+     is already a reference — do not touch it. Recipe obligations for Kubernetes go
+     into contract.md §14 as one paragraph (secrets, CA bundles, CIMD documents as
+     `env:`; `file:` only where the runtime user owns a `0600` regular file; store
+     path is a subdirectory Atesaki creates), stated as today's default volume
+     behavior pinned to tested versions, not as a law of the platform.
 4. `docs(contract): clientOriginIn in the rule vocabulary` (#57)
    - G7 and B1 `grant.policy.rules[].when`: `clientOriginIn: [origin]` in the B3 host
      grammar with scheme `https`; matches a CIMD client id whose origin equals an
@@ -62,8 +67,20 @@ the rule needs are listed in the PR (packet 03 writes them):
    preconditions say: sections SHA-pinned in the slice packet, fixtures hash-locked,
    owner has read those pages; `contract-v0-freeze` applied when the whole portable
    set is green. Ledger row. README status line updated.
-9. `docs(contract): B8 configurability and the client-matrix window` — resolve the
-   flagged B8 note per the ruling; §14 gains the staleness window number (B8 row).
+9. `docs(contract): B8 configurability` — resolve the flagged B8 note per the ruling.
+10. `docs(contract): the client-matrix staleness window` — §14 gains the number (B8
+    row).
+11. `docs(contract): limiter outage and the approve/revoke budgets` (#60, as ruled)
+    — a `deltas.md` row against mcp-sso §09's fail-open limiter; B7 channel row; B8
+    budgets for approve and revoke; threat-model row.
+12. `docs(contract): readiness and shutdown` (#61, as ruled) — contract.md §9
+    (`serve`) gains `livez`/`readyz` semantics and the `SIGTERM` sequence; B8 the
+    drain bound; §14's "how active streams end" points at it.
+13. `docs(contract): the alg sentence in B4` — "never read from the token" becomes
+    "the token's `alg` must equal the configured algorithm and match the key's type;
+    the allowed set never comes from the token" (RFC 7515 requires processing the
+    header; RFC 8725 forbids trusting it). Mechanical wording; no ruling needed, but
+    the ledger notes it.
 
 HARD RULES: one ruling per PR; nothing beyond the owner's words; every "never"
 added carries the test a wrong build fails, named as a fixture id for packet 03;

@@ -2,8 +2,8 @@ MODEL: gpt-5.6-sol   EFFORT: xhigh   TOOL: Codex CLI in ~/project/atesaki-core
 MILESTONE: M1 residuals (docs/roadmap.md). RESCOPED 2026-09-02 under open question
 #54 — the earlier JSON-Schema-plus-Python version of this packet is in git history
 (`00ed981`) and is not dispatched. PRECONDITION: #54 ruled as proposed (phases 1 and
-3); #56 landed in the contract (phase 2). If #54 is ruled the other way, STOP and
-report; the old packet is the fallback.
+2); packet 14 item 3 (#56) landed in the contract (phase 3 — it does not block M2).
+If #54 is ruled the other way, STOP and report; the old packet is the fallback.
 WHY: the Go validator merged (PR 5, PR 6) with a 71-case refusal suite that names the
 rule per case — that suite is the mutation suite. What is still missing is the
 mechanical proof that B1 and the parser agree field by field, and the G2 record types
@@ -28,9 +28,12 @@ PHASE 1 — `test(config): B1 to parser drift check`
   (`string`, `integer`, `boolean`, `list`, `mapping`, `ref`, `url`, `path`,
   `duration`, `union:<tag>`) and requiredness as observed: required, optional, or
   per-variant (`entra`/`oidc`/`header`/`console`; credential `type`; `keys` arm).
-  The registry is produced by parsing the three valid examples plus one synthetic
-  document per union arm so every arm is visited; a field never visited is a test
-  failure ("no positive case for arm X").
+  Registration happens at **accessor-call time, present or absent** — the parser
+  calls `o.str("x", false)` for every optional field it knows, so an optional field
+  no example uses is still registered. The registry is produced by parsing the three
+  valid examples plus one synthetic document per union arm so every variant branch
+  executes; a B1 row under a variant that the registry lacks is reported as a
+  B1→parser miss, which is also how an unexecuted branch shows up.
 - The test parses B1's two tables and B4's `assertion` shape from
   `docs/contract-boundaries.md` (markdown rows `| field | type | rule |`; nested
   fields written inside the type cell as `{a, b?, c}` — state the parsing rules in the
@@ -40,15 +43,7 @@ PHASE 1 — `test(config): B1 to parser drift check`
   never pick a side in code.
 - Done when both diffs are empty or every difference is an owner-acknowledged gap.
 
-PHASE 2 — `feat(config): knownCimd entries are references`
-- `clients.knownCimd[]` entries parse as B2 references: `env:NAME` holds the document
-  text; `file:PATH` follows the B2 file invariants (already implemented for secrets).
-  Refusals name the reference, never the content. Whether the content is a valid CIMD
-  document stays deferred to slice 2's CIMD validator, as PR 5 stated.
-- Refusal cases: bare path (no scheme), unknown scheme, missing env, env blank, file
-  invariants — one file each under `testdata/refuse/`, `# expect:` naming the B2 rule.
-
-PHASE 3 — `feat(records): G2 record types and generated schemas`
+PHASE 2 — `feat(records): G2 record types and generated schemas`
 - `internal/records`: one Go type per G2 record — `grant_request`, `preapproval`,
   `grant`, the `authorization_code` delta fields, `grant_event`, `machine_tombstone`.
   Make illegal states unrepresentable: `state` is a closed enum; fields G6 sets only in
@@ -69,15 +64,26 @@ PHASE 3 — `feat(records): G2 record types and generated schemas`
   library (name it, version, publish date, age) or by the projection's own decoder
   if no dependency is needed — state which and why.
 - G2↔types drift test: parse G2's record paragraphs (field lists with `?` marking
-  optional) and compare with the types' registered fields both ways; empty or fail.
+  optional) and compare with the types' registered fields both ways; then, for every
+  `?` field, the state variant that owns it in the types must match a G6 row that
+  sets it in that state (parse the G6 mutation column); a field owned by a state no
+  row sets, or set by a row in a state that does not own it, fails. Empty or fail.
+
+PHASE 3 — `feat(config): knownCimd entries are references` (after packet 14 item 3)
+- `clients.knownCimd[]` entries parse as B2 references: `env:NAME` holds the document
+  text; `file:PATH` follows the B2 file invariants (already implemented for secrets).
+  Refusals name the reference, never the content. Whether the content is a valid CIMD
+  document stays deferred to slice 2's CIMD validator, as PR 5 stated.
+- Refusal cases: bare path (no scheme), unknown scheme, missing env, env blank, file
+  invariants — one file each under `testdata/refuse/`, `# expect:` naming the B2 rule.
 
 HARD RULES: no config JSON Schema is written (#54); `seed/atesaki.schema.json` is
 evidence, never copied; touches only `internal/config/**`, `internal/records/**`,
 `schema/records/**`, and — only for gaps the owner asks you to fix — the B1 or G2
 source section with a one-line reason per change; one phase per run.
 
-DONE WHEN: phase 1 diffs empty; phase 2 refusals green; phase 3 golden and mutation
-tests green and the G2 diff empty; `go test -race ./...` green; lint green.
+DONE WHEN: phase 1 diffs empty; phase 2 golden and mutation tests green and the G2
+diff empty; phase 3 refusals green; `go test -race ./...` green; lint green.
 
 REPORT EACH RUN: phase and PR; head SHA; the drift diffs as printed; every B1/G2
 sentence the parser or types could not honor as written; positive-case counts per

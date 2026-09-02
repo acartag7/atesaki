@@ -30,18 +30,28 @@ SCOPE — serial PRs, one behavior each, in this order:
    CAS predicates, mutations, durable events); the conformance suite as the contract
    (atomicity per row, CAS semantics, uniqueness, ordering-free comparison); memory
    passes; `serve` refuses memory (accepted by the runner and, later, `rehearse`).
-2. `feat(store): sqlite adapter` — pure-Go driver (name it, version, publish date,
-   age); WAL; `busy_timeout`; `BEGIN IMMEDIATE` for every writing transaction (a
-   deferred transaction that reads then writes fails with `SQLITE_BUSY_SNAPSHOT`
-   under a concurrent writer, and the busy handler cannot retry it);
-   `synchronous=FULL`; the db lives in the directory slice 1 creates; `-wal`/`-shm`
-   sidecars checked under B2 on every open; passes the same suite; the suite also runs
-   under contention (two goroutines on the same CAS).
+2. `feat(store): sqlite adapter` — pure-Go driver chosen and pinned **first** (name
+   it, version, publish date, age), and its open semantics proven by an integration
+   test before any row lands: how it opens the main file, how it creates `-wal` and
+   `-shm` (SQLite's Unix VFS gives them the database file's mode; observe what this
+   driver does), whether it honors a no-follow open flag. B2 for the store is then:
+   the directory is Atesaki's (`0700`, created by it, held open); the database file is
+   created by Atesaki with `O_EXCL` and `0600` before the driver sees the path; after
+   the driver opens, re-open the path with `O_NOFOLLOW`, `fstat`, and compare the
+   inode with the file Atesaki created; sidecars re-checked under B2 on every open.
+   A B2 sentence the driver cannot meet is a contract gap reported before this PR
+   merges — never a weakened check. WAL; `busy_timeout`; `BEGIN IMMEDIATE` for every
+   writing transaction (a deferred transaction that reads then writes fails with
+   `SQLITE_BUSY_SNAPSHOT` under a concurrent writer, and the busy handler cannot
+   retry it); `synchronous=FULL`; passes the same suite, also under contention (two
+   goroutines on the same CAS).
 3. `feat(as): metadata, stateless DCR, CIMD` — origin AS metadata (fields per
    §9.1/RFC 8414 as inherited; `scopes_supported` per the #53 ruling); stateless DCR
    per §9.2 with the redirect allowlist (§10); vendored CIMD from `knownCimd` refs;
-   live fetch behind `clients.cimd.liveFetch` only if #5 allowed — the reference's
-   guarded fetcher clauses through the named egress profile; CIMD document validation.
+   live fetch behind `clients.cimd.liveFetch` only if #5 allowed and exactly as
+   ruled: the document origin must be on the exact allowlist before any network
+   call; the inherited caps by clause; the validated-IP dial when the profile is
+   direct; CIMD document validation.
 4. `feat(as): authorize steps 1–4, ceiling, purpose and duration` — §9.3 steps 1–4
    exactly (`resource` required and exact, D13); effective scopes = requested ∩
    catalog ∩ group ceiling (#53) with `scope_ceiling_applied`; G-a parsing of
@@ -49,18 +59,23 @@ SCOPE — serial PRs, one behavior each, in this order:
    direct authorize, the §17.11 signed bridge params and synthetic callback, console
    pairing's round trip with the equal-or-`invalid_request` reconciliation); G-b
    `requested_hash` over raw scopes (G3, RFC 8785 — a pinned JCS implementation
-   tested against the JCS vectors, or a restricted-grammar proof that Go's encoder
-   with `SetEscapeHTML(false)` is byte-identical for these shapes; state which).
+   after supply-chain review, or a purpose-written canonical serializer for the fixed
+   G3 shapes; either is tested against the RFC 8785 vectors; Go's `encoding/json` is
+   not JCS and no "close enough" argument is accepted).
 5. `feat(policy): built-in rules` — G7 vocabulary including `clientOriginIn` (#57);
    AND-only; deny overrides allow; escalate by default; purpose unreadable;
    `policy_version` digest; the boot contradiction check already in `validate` learns
    the new condition.
-6. `feat(grants): A1, A2, A3 insert, A3′, A3″` — consent token signed with
-   `request_id`, `purpose`, `approved_duration_s` (D3); `allow` → consent page;
+6. `feat(grants): A1, A2, A3 insert, A3′, A3″, lazy expiry` — consent token signed
+   with `request_id`, `purpose`, `approved_duration_s` (D3); `allow` → consent page;
    `deny` → `access_denied`; escalate → insert `grant_request` + `preapproval` per
    A3 with dedupe and both caps, `approval_pending` + `request_id`; decider error →
-   `temporarily_unavailable`. No approver exists yet: every pre-approval expires via
-   A14 — contract-conformant, not an interim state.
+   `temporarily_unavailable`. **This slice owns A14's lazy path** for every row it
+   reads: the cap and dedupe read in A3, and the reads in A9/A10, first transition
+   past-due rows they touch (G5) inside the same transaction with their durable
+   events, or expired pending rows keep consuming the cap. M5 adds the sweeper. No
+   approver exists yet: every pre-approval expires — contract-conformant, not an
+   interim state.
 7. `feat(grants): consent, exchange, rotation, revocation` — A7 (denial consumes the
    JTI, D11), A8, A9 (sign-before-commit, G8; family and activation committed
    atomically, D6; `grant_expires_at` from activation, G9), A9′ (consumed on binding
@@ -71,11 +86,13 @@ SCOPE — serial PRs, one behavior each, in this order:
    client secrets (compare digests with `subtle.ConstantTimeCompare`).
 8. `feat(identity): entra, oidc` — redirect flow, id_token verification (issuer,
    audience, nonce, expiry, signature under the JWKS fetched through
-   `identity.egressProfile`), groups from the claim only; Entra overage (>200 groups
-   → no `groups` claim, an overage marker) = no groups = empty ceiling, never a Graph
-   call; group object ids as the `groupsToScopes` keys unless the app emits names —
-   the subject boundary §6.5; identity-failure pairs (rejection vs port throw) per
-   §19.2.
+   `identity.egressProfile`), groups from the claim only; Entra **exactly as mcp-sso
+   §17 says**: a groups overage marker is an identity refusal with its named audit
+   reason (never a Graph call, never a silent empty ceiling); group identifiers are
+   object ids (GUIDs) only — a display name as a `groupsToScopes` key is a boot
+   refusal; the subject boundary §6.5; identity-failure pairs (rejection vs port
+   throw) per §19.2; an `inherited` Atesaki fixture for every §17 clause with no
+   frozen upstream fixture.
 9. `feat(identity): header assertion, console pairing` — B4 in full: pinned `alg`
    per key, `kid` exact, JWKS through the profile with size/count caps, stale-interval
    refusal, bounded refetch on unknown `kid` (#58 as ruled), header exactly once,
@@ -84,7 +101,8 @@ SCOPE — serial PRs, one behavior each, in this order:
    fixed `console-operator` subject, the loud tutorial warning.
 10. `feat(cli): idp-request` — per provider (Entra dedicated, Entra shared, generic
     OIDC, header, console): the minimal ask (app type, the single redirect URI, the
-    groups claim and its format, secret delivery) and the explicit does-not-need list
+    groups claim as object ids with group filtering or app-assigned groups so overage
+    cannot occur, secret delivery) and the explicit does-not-need list
     (no Expose-an-API, no `api://` scopes, no per-client redirect churn); golden
     output per provider; contains no secret.
 11. `test(e2e): real sign-in to tool call` — the named real input (below).
@@ -94,7 +112,9 @@ MUST correspond to a row in docs/deltas.md — a deviation without a row is a bu
 and report. Never edit a frozen fixture. Pin the corpus version and manifest hash in
 the PR. A predicate that cannot be evaluated where G6 puts it (preflight vs in-tx) is
 a contract gap — report, do not move it. Never weaken CAS or atomicity to pass a
-fixture. Rate limits per client IP after B6 on register, authorize, token.
+fixture. Rate limits per client IP after B6 on register, authorize, token, approve,
+revoke with the B8 budgets; limiter failure per #60 as ruled — never fail open on a
+token-issuing path.
 
 VERIFY: the pinned portable fixture-id set — zero skips; Atesaki phase-2 fixtures
 green; the store conformance suite green on both adapters; crash tests at named
@@ -107,8 +127,10 @@ Codex on two routes with different catalogs (the #53 case) succeeding; the conso
 rung on a laptop; RFC 7009 revocation observed (refresh refused, access dies at TTL).
 
 DONE WHEN: parity status line published in the PR (corpus version passed, current,
-frozen fixtures not yet passed with reasons); real sign-in shown; packet-11 review
-clean.
+frozen fixtures not yet passed with reasons); every inherited clause this slice
+implements has a frozen upstream or an `inherited` Atesaki fixture, or is named
+uncovered and excluded from the capability claim; real sign-in shown; packet-11
+review clean.
 
 REPORT: parity line; deferred fixtures and why; every contract gap; divergences from
 mcp-sso you found that have no delta row (the most important findings); what each

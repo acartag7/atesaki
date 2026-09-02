@@ -22,21 +22,38 @@ DELIVERABLES
    behavior, version tested, date — staleness window: **proposed 90 days, awaiting the
    owner**. The B8 contract change precedes this deliverable only after owner approval.
    If unanswered, report this deliverable as blocked and continue with the others).
-2. `idp-request` output templates per provider: the minimal ask, and the explicit
-   "does NOT need" list (no Expose-an-API, no `api://` scopes, no per-client redirect
-   churn), paste-ready for a ticket.
-3. `Dockerfile` (distroless/static; non-root; read-only root; `0700` state dir) and
-   `deploy/kustomize/` example: Deployment, Service, Ingress with the `atesaki routes`
-   path list, NetworkPolicy derivable from documented egress, secrets as refs.
-4. `rehearse` client profiles: Claude Code (CIMD), Codex CLI (DCR, loopback), a
-   hosted client with a fixed callback — each a recorded flow the mock IdP satisfies.
+2. The recipe embeds the `idp-request` output the binary already produces (packet
+   06) — it designs no IdP ask of its own.
+3. `Dockerfile` (distroless/static; non-root; read-only root) and `deploy/kustomize/`
+   example: Deployment, Service, Ingress with the `atesaki routes` path list,
+   NetworkPolicy derivable from documented egress, secrets as refs. Kubernetes facts
+   the contract states (§14, #56) and the kit must embody, pinned to the cluster
+   version it was tested on: secrets, CA bundles, and CIMD documents arrive as
+   `env:` from Secret keys (today's default volume mounts are root-owned symlinks and
+   B2 refuses them by design); one supported volume type named (a ReadWriteOnce
+   PersistentVolumeClaim) mounted over a path the image does not own, with `fsGroup`
+   and `fsGroupChangePolicy` so the non-root process can create the store
+   subdirectory (`0700`) on first boot — **first boot and restart proven on a real
+   cluster**, never assumed; the ingress listed in `trustedProxies` (otherwise every
+   user shares one rate-limit bucket) and applying the same request-framing rule as
+   Go's parser; **no path rewrite** at the ingress (audiences are byte-exact);
+   `livez`/`readyz` exactly as #61 rules them; TLS terminates at the ingress and the
+   issuer still derives from `externalBaseUrl`; image pinned by digest;
+   `readOnlyRootFilesystem: true`.
+4. The client matrix consumes the `rehearse` profiles packet 15 shipped (Codex CLI
+   is per-install CIMD, per the live evidence — not DCR) and the live proofs from
+   packets 06 and 07; this packet designs no client flow and edits no fixture.
 5. Every "never/always/cannot" in the recipe traces to a rule and a fixture; a
    sentence that does not is removed or becomes a contract gap.
 6. Operations section states plainly, with the enforcing rule: access ends within
    one access TTL of revocation (G1); a retried refresh after a lost response ends
-   the grant and the agent signs in again (A10′); what a store-file loss means (key
-   rotation, every token dies); audit rotation without losing lines; how active
-   streams end at shutdown; the exec audit trail of the platform is the
+   the grant and the agent signs in again (A10′); a group removed after activation
+   does not revoke the grant — refresh rechecks nothing until expiry or revocation,
+   the levers are a shorter `maxDuration` and `grants revoke`; what a store-file loss
+   means (key rotation, every token dies); audit rotation preserves every line
+   already written (reopen, never truncate) while flow-event loss stays the accepted,
+   counted residual (G12) — no losslessness claim; how active streams end at
+   shutdown (#61 as ruled); the exec audit trail of the platform is the
    accountability source for CLI approvals in a container (#24 as ruled).
 
 HARD RULES: docs and deploy artifacts only; no changes to contract pages; nothing

@@ -16,8 +16,9 @@ the security surface it opens, and the tests that prove it, is in `docs/roadmap.
                     dependency cooldown, two config nits, STATE refresh
  M1              02 config drift check + record types (RESCOPED, waits on #54)
  M2              14 contract closure — #53 scope ceiling, #5 live fetch, #56 knownCimd
-                    refs, #57 clientOriginIn, PR-5 interpretations, #58, #59, #55
-                 12 grants authority (waits on the #24 ruling)
+                    refs, #57 clientOriginIn, PR-5 interpretations, #58, #59, #55,
+                    #60 limiter outage, #61 readiness, B4 alg wording, B8 note, matrix window
+                 12 grants authority (waits on the #24 ruling; fixtures written in 03 phase 3)
                  03 phase 0 (fixture profile) then phase 1 (slice-1 fixtures)
                  04 threat model + negative matrix
                           │
@@ -25,12 +26,14 @@ the security surface it opens, and the tests that prove it, is in `docs/roadmap.
                  its fixtures hash-locked, the owner has read those pages
                           │  strictly serial from here — no parallel dispatch:
  M3              05 Go slice 1 — runner + relay + verifier + validate --deep
-                    (needs the frozen mcp-sso §8 verifier fixtures — cross-lane input)
- M4              03 phase 2 → 06 Go slice 2 — sign-in, store port + SQLite, the allow
+                    (needs the frozen mcp-sso §8 verifier fixtures — cross-lane input;
+                    03 phase 2 is written alongside and locked before 06)
+ M4              06 Go slice 2 — sign-in, store port + SQLite, the allow
                     path (A1, A7–A11), idp-request
                     (needs mcp-sso §07/§09/§10/§11 frozen, or every unfrozen id listed
                     as deferred in the PR — never skipped silently)
- M5              03 phase 3 → 07 Go slice 3 — escalation, approvals CLI, machine
+                    (03 phase 3 written alongside, locked before 07)
+ M5              07 Go slice 3 — escalation, approvals CLI, machine
                     clients, sweeper, outbox  →  tag contract-v0-freeze
  M6              15 rehearse — mock IdP, client profiles
  M7              08 deployment recipe + kit
@@ -61,7 +64,11 @@ the security surface it opens, and the tests that prove it, is in `docs/roadmap.
   against the cooldown, and why the standard library was not enough.
 - **Fixtures before code, per slice.** A slice's Atesaki fixtures are hash-locked and
   its sections pinned before its first implementation PR. A skipped locked fixture is
-  a failure.
+  a failure. Fixture phases for the next slice are written alongside the current
+  slice's code and locked before the next slice starts.
+- **Packets cite, they do not legislate.** A packet names the row, the artifact to
+  produce, and the proof to run. Where a packet paraphrases a rule, the contract's
+  sentence wins; a paraphrase that disagrees with it is a bug in the packet.
 - Conventional commits (`type(scope): why`). No AI co-author trailers. No "Made with"
   lines. Feature branch + PR. Never force-push `main`.
 - **Report shape:** what shipped · what did not and why · contract gaps found (the most

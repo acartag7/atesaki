@@ -20,9 +20,13 @@ order, the gotcha register rows 11–19, 24, 28) · prompts/README.md convention
 docs/open-questions.md #59 as ruled.
 
 SCOPE — serial PRs, one behavior each, in this order (merge before the next):
-1. `feat(runner): load and validate Atesaki fixtures` — loads a fixture in the
-   Atesaki profile; validates `given.config` with the real parser; materializes
-   `given.files` in a temp dir with the stated modes/owners/links; ports: clock,
+1. `feat(runner): load and validate Atesaki fixtures` — verifies `MANIFEST.json`
+   hashes before touching the disk; loads a fixture in the Atesaki profile; validates
+   `given.config` with the real parser; materializes `given.files` under `os.Root` in
+   a fresh temp root per fixture, enforcing the profile's containment grammar
+   (relative paths, no `..`, link targets inside the root, modes, count and byte
+   caps; no ownership simulation) — a fixture that violates it is refused before any
+   write; ports: clock,
    seeded randomness (the §19.2 HMAC-SHA256 counter stream, byte-exact), keys from
    `fixtures/keys`, recorded outbound HTTP only (an unrecorded call fails the fixture);
    chains and captures; exact comparison — status, headers (RE2 where stated),
@@ -45,14 +49,23 @@ SCOPE — serial PRs, one behavior each, in this order (merge before the next):
    exactly once, HTTP/2 `:authority` equality, forwarded headers only from
    `trustedProxies`, the rightward walk, hop cap, malformed → `400`) → Host/Origin gate
    (`Origin` at most once; absent allowed; present exact) → route match. Check header
-   multiplicity with `len(r.Header[...])`, never `Header.Get`. `Transfer-Encoding` +
-   `Content-Length` together → `400`, pinned by fixture. Rate-limit identity = the B6
-   client IP; budgets per B8.
+   multiplicity with `len(r.Header[...])`, never `Header.Get` — except `Host`, which
+   Go promotes to `Request.Host`: two HTTP/1.1 `Host` fields are refused `400` by the
+   parser before the handler (fixtures pin the status; no audit line exists for it),
+   and on HTTP/2 a `Host` field beside `:authority` stays in `Header` and must
+   byte-equal `Request.Host`. `Transfer-Encoding: chunked` beside `Content-Length` is
+   resolved by Go's parser (chunked wins, length dropped) — the fixture pins that
+   observable; do not add a second parser. Header **bytes** via `MaxHeaderBytes`;
+   header **count** (B8) counted in the handler → `431` (Go has no count limit).
+   Rate-limit identity = the B6 client IP; budgets per B8.
 4. `feat(verify): ES256 verifier, per-route metadata and challenge` — standard
    library only (`crypto/ecdsa`, raw `R||S` signatures, `crypto/rsa` unused here);
-   `alg` never read from the token; `iss` exact; `aud` exact single string = route
-   audience; `exp` with B8 skew; `scope` ⊇ `requireScope`; duplicate `Authorization`
-   fails closed; the per-route challenge (D1, B7); PRM at the path-inserted location;
+   the token's `alg` must equal the configured algorithm and match the key's type —
+   the allowlist never comes from the token (RFC 8725); `iss` exact; `aud` exact
+   single string = route audience; `exp` with B8 skew; `scope` ⊇ `requireScope`;
+   duplicate `Authorization` fails closed; the per-route challenge (D1, B7); every §7
+   token clause implemented here has a frozen upstream fixture or an `inherited`
+   Atesaki fixture; PRM at the path-inserted location;
    AS metadata documents at the origin (endpoints exist in slice 2; the documents are
    served now with the fields the contract fixes). Public key from `signingKeyRef`.
 5. `feat(relay): allowlisted relay with streaming and cancel` — hand-built outbound
@@ -65,9 +78,11 @@ SCOPE — serial PRs, one behavior each, in this order (merge before the next):
    to the response context cancels the upstream; top-level JSON array refused;
    `DELETE` forwarded; `mcp-session-id` round-trips. The injected credential appears
    in nothing Atesaki authors (never 1).
-6. `feat(serve): wire the relay, flow audit, validate --deep` — boot order: validate
-   in full → create the store directory `0700` if absent and check the path under B2
-   → open the audit sink (B2) → listen; nothing before validation passes. Flow audit
+6. `feat(serve): wire the relay, flow audit, validate --deep, health, shutdown` —
+   boot order: validate in full → create the store directory `0700` if absent and
+   check the path under B2 → open the audit sink (B2) → listen; nothing before
+   validation passes. `livez`/`readyz` and `SIGTERM` drain exactly per #61 as ruled
+   (no upstream reachability in readiness). Flow audit
    lines (G12 class F): JSON-encoded, one line, allowlisted fields, a formatter that
    never throws; `audit_sink_failed` counted and loud. Boot warning when listening on
    a non-loopback address with `trustProxyHeaders: false` (every user shares one
@@ -79,8 +94,9 @@ SCOPE — serial PRs, one behavior each, in this order (merge before the next):
    non-loopback, non-private addresses; never a state-changing call.
 7. `test(e2e): real MCP behind the relay` — the named real input (below).
 
-`rehearse` is NOT in this slice (it runs the full AS, M6). No `mint` verb ships, ever:
-the e2e test mints its own token with the test signing key.
+`rehearse` is NOT in this slice (it runs the full AS, M6). There is no `mint` verb in
+v0 (§9's verb list is closed; a bounded one would be a contract change): the e2e
+test mints its own token with the test signing key.
 
 HARD RULES: implement only what the locked fixtures and the pinned sections require;
 no special-casing fixture strings; no invented library APIs (grep the module source);
@@ -98,9 +114,11 @@ token at a second route is refused with that route's challenge; the upstream's
 recorded request headers contain no bearer token; `validate --deep` against that
 setup reports every probe.
 
-DONE WHEN: all slice-1 fixtures green, zero skips; §8 portable green;
-`validate`/`routes`/`serve`/`validate --deep` work on the three valid example configs;
-packet-11 review clean; the parity status line published in the PR.
+DONE WHEN: all slice-1 fixtures green, zero skips; §8 portable green; every
+inherited clause this slice implements has a frozen upstream or an `inherited`
+Atesaki fixture, or is named uncovered in the parity line and excluded from the
+capability claim; `validate`/`routes`/`serve`/`validate --deep` work on the three
+valid example configs; packet-11 review clean; the parity status line published.
 
 REPORT: fixtures passed/failed by id; the real MCP you relayed; every contract gap;
 every place the contract was ambiguous and what you did NOT decide.

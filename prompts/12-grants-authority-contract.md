@@ -18,9 +18,10 @@ DELIVERABLE — one contract-change PR:
    container residual (every `kubectl exec` is one OS user) named in G13 and the
    platform's exec audit trail as a §14 recipe obligation.
 2. Ledger row in docs/decisions.md with the receipt; strike #24 in open-questions.
-3. Fixtures for the new rules in the Atesaki profile (boot/suite kinds): unauthorized
-   OS user refused per verb; self-approval refused where checkable; the named residual
-   documented, not tested away.
+3. The fixtures the new rules need, named by intent in the PR (unauthorized OS user
+   refused per verb; self-approval refused where checkable; the named residual
+   documented, not tested away) — written in packet 03 phase 3, not here: the
+   fixture profile does not exist when this packet runs.
 4. Mirror threat-model rows (approver spoofing, store-file permission boundary).
 
 HARD RULES: contract-change PR only; nothing implemented; nothing beyond what Arnold

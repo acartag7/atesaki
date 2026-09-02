@@ -28,6 +28,16 @@
    stable URL for every install. The question is now whether that per-user vendoring
    step is acceptable or live fetch is required; live fetch, if allowed, goes through the
    named egress profile with B5 caps. Arnold decides.
+   **Roadmap note 2026-09-02:** the reference's guarded fetcher (mcp-sso §17.1.5)
+   resolves the name, validates the address, and dials it directly — it forbids a
+   proxy, because a proxy resolves the name itself and the validated-IP dial is gone.
+   "Through the named egress profile" therefore contradicts the clause it inherits.
+   **Proposal:** `clients.cimd.liveFetch: {egressProfile, allowedOrigins[]}` — exact
+   `https` origins, never patterns; a document URL whose origin is not listed is
+   refused before any network call; with an operator-chosen destination the allowlist
+   is the SSRF control, so the fetch may use the profile; when the profile is direct
+   the inherited validated-IP dial applies as written; the remaining inherited caps
+   are cited by clause. A new `deltas.md` row. Arnold decides.
 6. ~~In-cluster TLS/mTLS to upstreams~~ **DECIDED 2026-08-31 (Arnold): recipe
    obligation only in v0** — the product cannot enforce network position; §14 states
    it plainly; `validate --deep` warns on plain-http upstreams beyond loopback/private
@@ -310,16 +320,19 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     set; `contract-v0-freeze` is applied when the whole portable set is green (end of
     slice 3). The "slices before freeze" decision already taken by merging PR 5 gets a
     ledger row with that receipt. Arnold decides.
-56. **B2 file rules on Kubernetes.** Secret and ConfigMap volume mounts are symlinks
-    into a root-owned directory and `subPath` mounts are root-owned regular files; B2
-    refuses both by design (`[R]`), so `file:` references are unusable on the platform
-    the config is shaped for. `env:` references work. `knownCimd[]` and `caBundleRef`
-    have no `env:` form today. **Proposal:** `knownCimd[]` entries become B2 references
-    (`env:` or `file:`); the recipe states that on Kubernetes secrets, CA bundles, and
-    CIMD documents arrive as `env:` from Secret keys, that `file:` is for hosts where
-    the runtime user owns a `0600` file, and that the store path is a subdirectory
-    Atesaki creates under the volume (mount roots are root-owned and fail the
-    parent-directory rule). No `[R]` default changes. Arnold decides.
+56. **B2 file rules on Kubernetes.** With today's default volume behavior, Secret and
+    ConfigMap mounts are symlinks into a root-owned directory and `subPath` mounts are
+    root-owned regular files (Kubernetes 1.37 adds an alpha, off-by-default feature
+    with ownership fields); B2 refuses both by design (`[R]`), so `file:` references
+    are unusable on the platform the config is shaped for. `env:` references work —
+    for secrets and for `caBundleRef`, which is already a B2 reference. `knownCimd[]`
+    is the one field with no reference form (bare paths). **Proposal:** `knownCimd[]`
+    entries become B2 references (`env:` or `file:`); the recipe states, pinned to the
+    Kubernetes versions it was tested on, that secrets, CA bundles, and CIMD documents
+    arrive as `env:` from Secret keys, that `file:` is for hosts where the runtime
+    user owns a `0600` regular file, and that the store path is a subdirectory
+    Atesaki creates under the volume (mount roots fail the parent-directory rule).
+    No `[R]` default changes. Arnold decides.
 57. **Rules cannot name a client whose id is per-install.** G7's `clientIn` matches
     exact client ids; Codex's CIMD client id is a per-install URL (#5 evidence), so a
     route rule "auto-approve read scopes for Codex" cannot be written once.
@@ -343,3 +356,20 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     `Accept: application/json`, closed after the status line; any HTTP status proves
     reachability (401/403 included); a TLS or proxy failure names the hop. Recorded as
     a gap for packet 14; the implementer must not invent it.
+60. **Limiter outage and the missing budgets.** The reference limiter fails **open**
+    when it throws on authorize, approve, token, and revoke, fail-closed only for
+    stored registration (mcp-sso §09); Atesaki inherits that by silence. B8 names
+    budgets for register, authorize, and token only. **Proposal:** a limiter error is
+    `temporarily_unavailable` on every OAuth path (a `deltas.md` row, consistent with
+    the decider-outage ruling); B8 gains approve = the authorize budget and revoke =
+    the token budget. Arnold decides.
+61. **Readiness and shutdown semantics.** B1 reserves `health.livePath` and
+    `health.readyPath` and §14 asks the recipe to say how active streams end at
+    shutdown, but no sentence says what `readyz` checks or what `SIGTERM` does. A
+    probe that includes upstream reachability takes a multi-route gateway out of the
+    load balancer whenever one backend flaps (the seed recipe did this). **Proposal:**
+    `livez` = the process serves; `readyz` = store open, signing key loaded, and
+    (from slice 2) the identity JWKS fetched at least once — never upstream
+    reachability, which is `validate --deep`'s job; `SIGTERM` stops accepting,
+    drains non-stream requests for a bounded time (a B8 number), ends streams, then
+    exits. Owned by slice 1 once ruled. Arnold decides.

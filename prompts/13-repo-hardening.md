@@ -10,11 +10,14 @@ Read first, fully: docs/roadmap.md §M0 · docs/quality-bar.md · prompts/README
 
 PR 1 — `ci: build, vet, gofmt, race tests, govulncheck, contract lint`
 - `.github/workflows/ci.yml`: on pull_request and push to main; `permissions:
-  contents: read`; matrix `ubuntu-latest` + `macos-latest`; Go version from go.mod;
-  actions pinned by commit SHA (name the version in a comment); steps: `go build
-  ./...`, `go vet ./...`, `gofmt -l .` (fail on any output), `go test -race ./...`
-  (`-mod=readonly`), `govulncheck ./...`, `python3 tools/contract-lint.py`,
-  `git diff --check`.
+  contents: read`; a matrix job (`ubuntu-latest` + `macos-latest`) **plus one
+  aggregate job named `ci` that `needs` the matrix** — branch protection requires
+  `ci`, because matrix legs report suffixed names; Go version from go.mod; actions
+  pinned by commit SHA (version in a comment); steps: `go build ./...`, `go vet
+  ./...`, `test -z "$(gofmt -l .)"` (a bare `gofmt -l` exits 0), `go test -race
+  ./...` (`-mod=readonly`), `go run golang.org/x/vuln/cmd/govulncheck@<exact
+  version> ./...` (pinned; a fresh runner has none), `python3
+  tools/contract-lint.py`, `git diff --check`.
 - Prove the gate bites: push one temporary commit with a failing test, link the red
   run in the PR, drop the commit, link the green run.
 - After merge (owner runs, commands in the PR body): branch protection on `main` —
@@ -33,24 +36,35 @@ PR 2 — `chore: license, security policy, gitignore`
   scratch. Nothing that is already tracked.
 
 PR 3 — `chore: dependency cooldown in CI and the update bot`
-- Bot layer: `.github/dependabot.yml` for `gomod` and `github-actions` with
-  `cooldown: default-days: 5, semver-major-days: 30` (GitHub's built-in default has
-  been 3 days since 2026-07-14 — set ours explicitly; the value must equal the CI
-  layer's; a bot-only floor stops nothing).
+- The floor `[decide]`: the plan assumes **15 days, majors 30** (mcp-sso's number —
+  Atesaki is the same kind of boundary with a handful of dependencies); the house
+  minimum is 5/30. One number, used by both layers.
+- Bot layer: `.github/dependabot.yml` (Dependabot, not Renovate) for `gomod` and
+  `github-actions` with `cooldown: default-days: <floor>, semver-major-days: 30`
+  (GitHub's built-in default has been 3 days since 2026-07-14 — set ours
+  explicitly; a bot-only floor stops nothing).
 - CI layer: `tools/depage.py` (stdlib only): for every `require` in go.mod, fetch
-  `https://proxy.golang.org/<module>/@v/<version>.info` and read `Time`; fail if the
-  version is younger than 5 days, or 30 days when its major differs from the major on
-  `origin/main`; an exception needs a row in `tools/dependency-exceptions.json`
-  with module, version, advisory id (GHSA/CVE), minimum fixing version, and date —
-  never a global floor change. Test it against a fake `.info` one day old (must fail)
-  and one thirty days old (must pass). Wire it into `ci.yml`.
+  `https://proxy.golang.org/<escaped module>/@v/<version>.info` (module paths are
+  escaped per the Go module reference: an uppercase letter becomes `!` plus its
+  lowercase) and read `Time`; fail if the version is younger than the floor, or 30
+  days when its major differs from the major on `origin/main` (a module new to
+  go.mod has no baseline: apply 30 days); a network failure is a CI failure, never a
+  pass; an exception needs a row in `tools/dependency-exceptions.json` with module,
+  version, advisory id (GHSA/CVE), minimum fixing version, and date — never a global
+  floor change. The proxy timestamp is a risk signal, not provenance (`go.sum` does
+  not authenticate it). Test against a fake `.info` one day old (must fail) and one
+  older than the floor (must pass). Wire it into `ci.yml`. State in the PR that
+  `go.sum` is the integrity ledger, not a lockfile: `go.mod` plus minimal version
+  selection pins the build list, checked with `go list -m all`.
 
 PR 4 — `fix(config): read the config file through one descriptor`
 - `Load` stats the path, then reads the path again: the size cap is advisory across
-  that gap. Mirror the secret-file path: open once, `fstat` the descriptor, read
-  through `io.LimitReader(f, configMaxBytes+1)`, refuse if the limit is hit. Regression
-  test: a file that grows between open and read is still refused (use a pipe or a
-  file truncated after open — name the technique).
+  that gap. Fix: open once (symlinks allowed — a ConfigMap-mounted config is one),
+  `fstat` the descriptor for the regular-file check only, read through
+  `io.LimitReader(f, configMaxBytes+1)`, refuse if more than the cap arrived. The cap
+  is enforced by the reader, so no size-then-read race exists to test; regression
+  tests: a file one byte over the cap is refused, a file exactly at the cap is read,
+  and the refusal names `B5.config-size`.
 
 PR 5 — `refactor(config): one reserved-path source`
 - `cmd/atesaki/main.go` and `internal/config/validate.go` each build the reserved
