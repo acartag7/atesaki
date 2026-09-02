@@ -1,4 +1,6 @@
-MODEL: gpt-5.6-sol   EFFORT: high   TOOL: Codex CLI in ~/project/atesaki-core (after slice 3)
+MODEL: gpt-5.6-sol   EFFORT: high   TOOL: Codex CLI in ~/project/atesaki-core (after M6)
+MILESTONE: M7 (docs/roadmap.md). PRECONDITION: `rehearse` merged (packet 15); the
+client-matrix staleness window ruled (B8 row, packet 14 item 9).
 WHY: contract.md §14 — the recipe is a shipped deliverable, per-mode, every obligation
 stated; plus the container, the kustomize example, and the `idp-request` templates.
 
@@ -30,6 +32,12 @@ DELIVERABLES
    hosted client with a fixed callback — each a recorded flow the mock IdP satisfies.
 5. Every "never/always/cannot" in the recipe traces to a rule and a fixture; a
    sentence that does not is removed or becomes a contract gap.
+6. Operations section states plainly, with the enforcing rule: access ends within
+   one access TTL of revocation (G1); a retried refresh after a lost response ends
+   the grant and the agent signs in again (A10′); what a store-file loss means (key
+   rotation, every token dies); audit rotation without losing lines; how active
+   streams end at shutdown; the exec audit trail of the platform is the
+   accountability source for CLI approvals in a container (#24 as ruled).
 
 HARD RULES: docs and deploy artifacts only; no changes to contract pages; nothing
 employer-internal; every command in the recipe actually run once against the real

@@ -1,128 +1,84 @@
 MODEL: gpt-5.6-sol   EFFORT: xhigh   TOOL: Codex CLI in ~/project/atesaki-core
-WHY: B1 is a reference table until a machine-readable schema exists (open question
-#36). The schema and its mutation suite are freeze artifacts. Contract-change PR.
+MILESTONE: M1 residuals (docs/roadmap.md). RESCOPED 2026-09-02 under open question
+#54 — the earlier JSON-Schema-plus-Python version of this packet is in git history
+(`00ed981`) and is not dispatched. PRECONDITION: #54 ruled as proposed (phases 1 and
+3); #56 landed in the contract (phase 2). If #54 is ruled the other way, STOP and
+report; the old packet is the fallback.
+WHY: the Go validator merged (PR 5, PR 6) with a 71-case refusal suite that names the
+rule per case — that suite is the mutation suite. What is still missing is the
+mechanical proof that B1 and the parser agree field by field, and the G2 record types
+the fixture profile (packet 03) needs for `given.state`/`then.state`. Two validators
+for one input would be the parser-differential class; one source (Go) with generated
+artifacts is not.
 
-RUN MODE: this packet lands through serial PRs. On each fresh run, fetch `origin/main`
-and inspect which phases below have merged. Implement only the first incomplete phase.
-Branch from current `origin/main`, open one self-explanatory PR, verify it, and stop.
-After the owner merges it, start the next phase from the new `origin/main`. Never
-stack phases. If a phase is still too large to review as one behavior, split it again
-and report the remaining work.
+RUN MODE: serial phases, one PR per run. On each fresh run fetch `origin/main`,
+inspect which phases merged, implement only the first incomplete phase, open one
+self-explanatory PR, verify it, stop. Never stack phases.
 
-PROVISIONAL PHASES
-1. `feat(schema): add config schema validation`
-   - `schema/atesaki-config.schema.json`
-   - the three complete `schema/valid/` examples, plus one positive case per arm of
-     every tagged or one-of union in B1 and B4 — each `identity.provider` variant
-     including `oidc`, `clientSecretRef` versus `publicClient`, `registration`
-     `dedicated` versus `shared`, `keys` `jwksUrl` versus `jwksRef`, each
-     `upstream.credential` type, each `egress.profiles` proxy form; a valid arm with
-     no positive case cannot merge
-   - the smallest `tools/schema-check.py` path that proves those examples pass
-   - bidirectional drift check over every B1 property, including the ones nested
-     inside a row's type cell (`upstream.credential.scheme`,
-     `egress.profiles.<name>.caBundleRef`, the `grant.policy.rules[].when` members)
-     and B4's `assertion` shape (B1 lists `identity.assertion` as one object; its
-     fields live in B4): for each field, name, type, and required/optional per
-     variant must agree between the table and the schema, mechanically; this phase
-     cannot merge with an omitted, invented, mistyped, or wrongly required property
-   - a starter refusal set in `schema/mutations/` — missing required field, wrong
-     type, null required, unknown field, field from an inactive `provider` variant —
-     asserted by the checker; a schema that does not refuse these cannot merge on
-     valid examples and property names alone
-2. `test(schema): add config refusal mutations`
-   - structural B1/B2/B3/B4 mutations, including malformed signed-assertion and
-     `keys` union combinations
-   - semantic B1/B2/B3 mutations, including machine scopes outside the route
-     catalog and declarations wholly denied by their route rules
-   - named-rule failure assertions in `tools/schema-check.py`; rules JSON Schema
-     cannot express are checker-owned Python assertions here — there is no
-     `atesaki validate` binary before packet 05 and this packet writes no Go
-   - split by boundary section if the refusal set is not one reviewable unit
-3. `feat(schema): add logical record schemas`
-   - the six `schema/records/*.schema.json` files
-   - state-dependent required and absent fields
-   - every record schema gets a positive case plus one refusal per unconditional
-     required field and per typed field — the four stateful records as much as
-     `authorization_code` and `machine_tombstone`
-   - a valid case for every G5 state branch and every per-reason `grant_event`
-     branch, plus one refusal mutation per independently required or forbidden field
-     inside each branch (an approved `preapproval` alone carries several); a record,
-     branch, or field with no case cannot merge
-   - `tools/schema-check.py` mapping from each record case to its logical schema,
-     with the expected pass or named-rule refusal asserted
-   - bidirectional G2 record-field-to-schema drift check: for each field, name,
-     required/absent per state, and the type G2/G3 assign must agree between the
-     table and the schema, mechanically; this phase cannot merge with an omitted,
-     invented, mistyped, or wrongly required property
-4. `test(schema): enforce contract-schema drift`
-   - rerun the B1-plus-B4 name/type/requiredness comparison in both directions
-   - rerun the G2 name/type/requiredness comparison in both directions
-   - coverage check that every union arm has a phase-1 positive case
-   - coverage check that every structural refusal rule in B1–B4 and every
-     checker-owned semantic rule has an executable phase-2 mutation and named-rule
-     assertion — the rule inventory is the source, the mutation files are the target
-   - coverage check that every record has its positive case, a missing-field refusal
-     per unconditional required field, and a wrong-type refusal per typed field —
-     counted separately — and that every G5 state branch and `grant_event` reason
-     branch has a phase-3 valid case and a refusal per state-dependent field
-   - final full-schema and mutation run
+Read first, fully: docs/contract-boundaries.md B1 (every row, nested fields inside
+type cells included), B2, B4 (the `assertion` object's fields) · docs/contract-grants.md
+G2, G5, G6 (the columns that set fields), G12 · docs/deltas.md D8 · internal/config/**
+(reader.go's accessors are where the registry hooks in; types.go; parse.go) ·
+docs/open-questions.md #54, #56 · seed/atesaki.schema.json (evidence only; stale shapes).
 
-Read first, fully: docs/contract-boundaries.md (B1–B8, every field and refusal rule —
-B4 in full: the signed-assertion union is a schema shape) · docs/contract.md §2, §4,
-§13 · docs/contract-grants.md G2, G5, G6, G7, G10, G12 (record states and the
-event/reason model are schema inputs) ·
-docs/deltas.md D8 · docs/open-questions.md #36 · seed/atesaki.schema.json and
-seed/PROVENANCE.md (evidence only — do NOT copy its stale shapes).
+PHASE 1 — `test(config): B1 to parser drift check`
+- The parser records every field path it accepts as it reads: dotted paths, `[]` for
+  list elements, `<name>` for map keys (`spec.egress.profiles.<name>.caBundleRef`,
+  `spec.machineClients[].routes[].scopes[]`), plus the type class the accessor used
+  (`string`, `integer`, `boolean`, `list`, `mapping`, `ref`, `url`, `path`,
+  `duration`, `union:<tag>`) and requiredness as observed: required, optional, or
+  per-variant (`entra`/`oidc`/`header`/`console`; credential `type`; `keys` arm).
+  The registry is produced by parsing the three valid examples plus one synthetic
+  document per union arm so every arm is visited; a field never visited is a test
+  failure ("no positive case for arm X").
+- The test parses B1's two tables and B4's `assertion` shape from
+  `docs/contract-boundaries.md` (markdown rows `| field | type | rule |`; nested
+  fields written inside the type cell as `{a, b?, c}` — state the parsing rules in the
+  test file's header comment) into the same path/type/requiredness triples.
+- Compare both directions; print both diffs; empty or fail. Where the table and the
+  parser disagree, STOP and list every disagreement as a contract gap in the PR —
+  never pick a side in code.
+- Done when both diffs are empty or every difference is an owner-acknowledged gap.
 
-DELIVERABLES
-1. `schema/atesaki-config.schema.json` — JSON Schema 2020-12 for the YAML stream:
-   `Gateway` and `Route` documents, every B1 field with its type, required/optional
-   per variant, the identity **tagged union** on `provider` (fields of inactive
-   variants refused via `unevaluatedProperties: false`), `machineClients[]`,
-   `grant.policy.rules[]` in the G7 vocabulary, references (`env:`/`file:`) as a
-   pattern type, durations as positive integers, identifiers and paths in the B3
-   grammars, host grammar from B3 as a pattern. `additionalProperties: false`
-   everywhere — unknown is refusal.
-2. `schema/mutations/` — a **refusal suite**: one YAML file per malformed-input rule
-   in B1/B2/B3/B4 (wrong type, unknown field, duplicate key, null required, blank string,
-   list-for-scalar, inline secret, non-canonical URL, nested routes, reserved-path
-   route, empty catalog, malformed signed-assertion and `keys` union combinations,
-   machine scopes outside the route catalog, declaration wholly denied by its route
-   rules — that one is a semantic check: out of JSON Schema scope, asserted by the
-   checker here and again by `atesaki validate` in packet 05). Each names the B-rule
-   it exercises. Plus `schema/valid/` — at least three complete valid configs: console
-   loopback, Entra dedicated with two routes sharing an upstream, header-mode signed
-   assertion with a machine client — and one positive case per union arm (phase 1).
-3. `schema/records/*.schema.json` — the portable logical record schemas from G2:
-   `grant_request`, `preapproval`, `grant`, `authorization_code` (delta fields only),
-   `grant_event`, `machine_tombstone`; state-dependent required/absent fields via
-   `if/then`; RFC 3339 UTC 3-ms-digit timestamps as a pattern; snake_case only. Every
-   record has a positive case, a missing-field refusal per unconditional required
-   field, and a wrong-type refusal per typed field; every G5 state branch and every
-   `grant_event` reason branch adds a valid case and one refusal per state-dependent
-   field.
-4. `tools/schema-check.py` (stdlib + one pinned validator only if unavoidable — name
-   the version and publish date): validates every `schema/valid/*` passes, every
-   `schema/mutations/*` fails **for the named rule**, not merely fails, and every
-   logical-record case is checked against its named schema for its expected result.
-   Semantic rules JSON Schema cannot express are asserted here in Python.
-5. Drift checks: every B1 property, nested ones included, and every B4 `assertion`
-   field must map to a config-schema property with the same type and requiredness,
-   and vice versa; every G2 record field must map to its logical record schema the
-   same way. The comparison is mechanical, per field — not a sample of examples.
-   Print both diffs. Where a contract table and schema disagree, STOP and list it as
-   a contract gap — do not silently pick.
+PHASE 2 — `feat(config): knownCimd entries are references`
+- `clients.knownCimd[]` entries parse as B2 references: `env:NAME` holds the document
+  text; `file:PATH` follows the B2 file invariants (already implemented for secrets).
+  Refusals name the reference, never the content. Whether the content is a valid CIMD
+  document stays deferred to slice 2's CIMD validator, as PR 5 stated.
+- Refusal cases: bare path (no scheme), unknown scheme, missing env, env blank, file
+  invariants — one file each under `testdata/refuse/`, `# expect:` naming the B2 rule.
 
-HARD RULES: one phase and one PR per run; touches only `schema/**`,
-`tools/schema-check.py`, and — only for gaps the owner asks you to fix — the B1 or G2
-source section itself with a one-line reason per change. No Go code. Do not start the
-next phase before the current PR merges.
+PHASE 3 — `feat(records): G2 record types and generated schemas`
+- `internal/records`: one Go type per G2 record — `grant_request`, `preapproval`,
+  `grant`, the `authorization_code` delta fields, `grant_event`, `machine_tombstone`.
+  Make illegal states unrepresentable: `state` is a closed enum; fields G6 sets only in
+  a given state live in that state's variant (e.g. `grant`'s `active` variant owns
+  `activated_at`, `grant_expires_at`, `family_id`), not as pointers on a flat struct.
+  A projection function flattens a record to the logical `snake_case` form the runner
+  compares in `then.state` (optional = omitted, never null). Timestamps: RFC 3339
+  UTC, exactly 3 ms digits, one formatter.
+- A generator writes `schema/records/<record>.schema.json` (JSON Schema 2020-12,
+  `if/then` per state, `additionalProperties: false`) from the Go types; a golden test
+  fails when the committed file differs from the generated one — the types are the
+  source, the files are artifacts the fixture profile consumes.
+- Mutation suite in Go, per record: one positive case per G5 state branch and per
+  `grant_event` reason branch; one refusal per unconditional required field (missing)
+  and per typed field (wrong type); one refusal per state-dependent required or
+  forbidden field inside each branch (an approved `preapproval` alone carries several).
+  Each case is validated against the generated schema by a small pinned JSON Schema
+  library (name it, version, publish date, age) or by the projection's own decoder
+  if no dependency is needed — state which and why.
+- G2↔types drift test: parse G2's record paragraphs (field lists with `?` marking
+  optional) and compare with the types' registered fields both ways; empty or fail.
 
-RUN DONE WHEN: the current phase is verified and its PR is open. PACKET DONE WHEN:
-`tools/schema-check.py` is green across all merged phases; both drift diffs are empty
-or every difference is listed as a gap; lint is green.
+HARD RULES: no config JSON Schema is written (#54); `seed/atesaki.schema.json` is
+evidence, never copied; touches only `internal/config/**`, `internal/records/**`,
+`schema/records/**`, and — only for gaps the owner asks you to fix — the B1 or G2
+source section with a one-line reason per change; one phase per run.
 
-REPORT EACH RUN: phase and PR; exact head SHA; changed behavior; checks run; remaining
-phases; B1↔config-schema and G2↔record-schema drift found so far; rules the schema
-cannot express; open questions the field tables left unanswered.
+DONE WHEN: phase 1 diffs empty; phase 2 refusals green; phase 3 golden and mutation
+tests green and the G2 diff empty; `go test -race ./...` green; lint green.
+
+REPORT EACH RUN: phase and PR; head SHA; the drift diffs as printed; every B1/G2
+sentence the parser or types could not honor as written; positive-case counts per
+union arm and per state branch.

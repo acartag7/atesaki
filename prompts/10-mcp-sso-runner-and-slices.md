@@ -9,9 +9,15 @@ owner-decision comments on PR #338 (the latest, "§19 simplification", supersede
 anchor and fenced-block ones) · §05, §07, §08, §09, §10, §11 ·
 docs/verification-design.md · ~/project/atesaki-core/docs/deltas.md (the consumer's
 declared divergences — label, never pin against, D1/D2/D3/D4/D5/D6/D7/D11/D12/D13).
-STALE-STATE NOTE: #338 is MERGED at 09fb858 and the runner already exists as draft
-PR #340 — rebase phases C/D onto #340's head and verify what A/B already landed
-before redoing anything.
+STALE-STATE NOTE (2026-09-02): #338 is MERGED at 09fb858. Draft PR #340 is
+SUPERSEDED — the runner landed on `main` as serial PRs (#374–#392 merged 2026-09-01;
+#388 and #391 open). Phases A–C are largely on `main`; verify each against `main`
+before redoing anything, then continue with D and E. What Atesaki needs, in order
+(docs/roadmap.md §4): (1) the runner passes the portable 8.4 draft and it freezes
+with a receipt; (2) `MANIFEST.json` + `CATALOGUE.md` + the CI hash gate; (3) the §08
+verifier slice frozen — M3's cross-lane input; (4) §07/§09/§10/§11 fixtures labeled
+portable/host against `deltas.md` including the scope-ceiling row packet 14 adds
+(catalog refusal at §9.3 step 3 becomes host) — M4's input.
 
 PHASE A — §19 simplification (contract PR): rewrite §19.4's coverage gate to **clause
 level** — `MANIFEST.json` lists, per numbered clause in §05–§17, the fixtures that pin

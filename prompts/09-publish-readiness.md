@@ -1,7 +1,9 @@
-MODEL: claude-opus-class or fable   EFFORT: high   TOOL: Claude Code in ~/project/atesaki-core (after slices 1–3 and packet 08 — the
+MODEL: claude-opus-class or fable   EFFORT: high   TOOL: Claude Code in ~/project/atesaki-core (after M7 — the
 live proof requires a working AS and the recipe; slice 1 alone cannot satisfy it)
-WHY: unshown work doesn't exist — and the name locks at first publish. The repo goes
-public at the first RUNNING slice, not before.
+MILESTONE: M8 (docs/roadmap.md). The name check (deliverable 1) runs on its own in
+M0 — the repo is already public as `acartag7/atesaki` and the module path is in
+`go.mod`, so a bad answer must arrive before more work is stamped with the name.
+WHY: unshown work doesn't exist — and the name locks at first publish.
 
 Read first: README.md · docs/decisions.md · seed/PROVENANCE.md (sanitization note) ·
 docs/recipe.md if present · the `edictum-visibility` skill (positioning rules, verified-
@@ -17,8 +19,12 @@ DELIVERABLES
    whole tree for hostnames, tenant ids, AD group names, Vault paths, employer names;
    confirm `~/project/atesaki/evidence/` is NOT referenced by anything that ships (it
    never leaves the machine).
-3. `SECURITY.md` + disclosure channel; `LICENSE`; `CHANGELOG.md` seeded; release
-   notes template that leads with what the user can now do.
+3. `SECURITY.md` and `LICENSE` exist since M0 — verify they still say the truth;
+   `CHANGELOG.md` seeded; release notes template that leads with what the user can now
+   do; the release workflow: binaries for linux/darwin with checksums, the container
+   image pinned by digest, SBOM and provenance attestations (GitHub artifact
+   attestations), `govulncheck` clean at the tag; the sanitization grep from
+   deliverable 2 added to CI so it runs on every PR from here on.
 4. README rewrite for strangers: lead with the pain killed ("front your MCP with your
    company login; the key never leaves the box; every grant says who, why, how long"),
    then the ten-minute path, then the honest scope (v0 slices shipped vs not), then the

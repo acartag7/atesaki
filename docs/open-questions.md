@@ -287,3 +287,59 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     and emit `scope_ceiling_applied`; (c) refuse. Arnold decides; the answer becomes a
     B-rule and a fixture. Claude Code's scope request was not observed (its authorize
     step needs the interactive `/mcp` menu).
+
+## Added 2026-09-02 with the roadmap (`docs/roadmap.md` §2)
+
+54. **Packet 02 versus the merged Go validator.** Packet 02 forbids Go and assumes no
+    `validate` binary; PR 5 merged both, and its refusal suite already is the mutation
+    suite the packet's phase 2 describes. Building a JSON Schema plus a Python checker
+    next means two validators for one input (the parser-differential class) and double
+    maintenance. **Proposal:** drop the config JSON Schema; add a mechanical
+    B1↔parser drift test in Go (field path, type, requiredness, both directions);
+    write the G2 records as Go types and generate `schema/records/*.schema.json` from
+    them with a golden test, because the fixture profile (packet 03) needs record
+    schemas for `given.state`/`then.state`; the fixture runner validates
+    `given.config` with the real parser. Reverses the config half of #36 only. Arnold
+    decides.
+55. **One freeze or a rolling one.** README already says product code is built slice
+    by slice against the draft (PR 5); `prompts/README.md`, `quality-bar.md`, and
+    packets 05–07 still gate every line of Go on a single `contract-v0-freeze` tag.
+    **Proposal:** freeze per slice — when a slice starts, the sections it implements
+    are SHA-pinned in its packet, their Atesaki fixtures hash-locked, and the mcp-sso
+    citations for those sections pinned; the owner reads those pages, not the whole
+    set; `contract-v0-freeze` is applied when the whole portable set is green (end of
+    slice 3). The "slices before freeze" decision already taken by merging PR 5 gets a
+    ledger row with that receipt. Arnold decides.
+56. **B2 file rules on Kubernetes.** Secret and ConfigMap volume mounts are symlinks
+    into a root-owned directory and `subPath` mounts are root-owned regular files; B2
+    refuses both by design (`[R]`), so `file:` references are unusable on the platform
+    the config is shaped for. `env:` references work. `knownCimd[]` and `caBundleRef`
+    have no `env:` form today. **Proposal:** `knownCimd[]` entries become B2 references
+    (`env:` or `file:`); the recipe states that on Kubernetes secrets, CA bundles, and
+    CIMD documents arrive as `env:` from Secret keys, that `file:` is for hosts where
+    the runtime user owns a `0600` file, and that the store path is a subdirectory
+    Atesaki creates under the volume (mount roots are root-owned and fail the
+    parent-directory rule). No `[R]` default changes. Arnold decides.
+57. **Rules cannot name a client whose id is per-install.** G7's `clientIn` matches
+    exact client ids; Codex's CIMD client id is a per-install URL (#5 evidence), so a
+    route rule "auto-approve read scopes for Codex" cannot be written once.
+    **Proposal:** add `clientOriginIn` (exact origins of CIMD client-id URLs, never
+    patterns) beside `clientIn` in the G7 vocabulary, AND-only like the rest; DCR
+    clients have no origin and never match it. Arnold decides.
+58. **Rung-4 JWKS refetch on an unknown `kid`.** B4 says keys are refreshed on a
+    schedule and used while stale up to the maximum interval, and that an unknown
+    `kid` refuses. It does not say whether an unknown `kid` may trigger an immediate
+    refetch (needed for key rotation without a verification gap) or how that refetch
+    is bounded (an attacker sending random `kid`s must not drive outbound calls).
+    **Proposal:** at most one on-demand refetch per key set per 60 s; a `kid` still
+    unknown after it refuses; the schedule is unchanged. A number, so it lands in B8
+    with the owner's "ok". Recorded as a gap for packet 14; the implementer must not
+    invent it.
+59. **`validate --deep` and the upstream "real read".** `contract.md §9` says the
+    verb probes each upstream with real reads and never a state-changing call, but not
+    what it sends to an MCP upstream. A `GET` on a Streamable HTTP endpoint may open a
+    stream; a `POST` is a JSON-RPC call. **Proposal:** a `GET` to the upstream URL
+    through the route's egress profile with no credential, no session, and
+    `Accept: application/json`, closed after the status line; any HTTP status proves
+    reachability (401/403 included); a TLS or proxy failure names the hop. Recorded as
+    a gap for packet 14; the implementer must not invent it.
