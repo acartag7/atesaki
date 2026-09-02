@@ -57,7 +57,7 @@ proxied egress, internal CAs, no staging environment.
 | `docs/open-questions.md` | only what is still open — nothing here is decided |
 | `docs/future.md` | not this version |
 | `docs/decisions.md` | the ledger — every `[O]` tag has a row saying how Arnold decided it |
-| `tools/contract-lint.py` | coverage lint: dangling refs, reasons without producers, states without operations, decisions without receipts |
+| `tools/contract-lint.py` | structural lint over the docs: dangling G/B/D/A/# references, durable reasons without a producing row, states no row produces, owner tags without a ledger receipt — it does not read packets or STATE and proves no semantic consistency |
 | `prompts/` | dispatch packets for every remaining piece of work, in execution order, with the gates between them (`prompts/README.md`) |
 
 There is no `http-api.md`: Atesaki has no website. Its HTTP surface (OAuth endpoints,

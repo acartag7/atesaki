@@ -11,22 +11,26 @@ Read first, fully: docs/roadmap.md §M0 · docs/quality-bar.md · prompts/README
 PR 1 — `ci: build, vet, gofmt, race tests, govulncheck, contract lint`
 - `.github/workflows/ci.yml`: on pull_request and push to main; `permissions:
   contents: read`; a matrix job (`ubuntu-latest` + `macos-latest`) **plus one
-  aggregate job named `ci` that `needs` the matrix** — branch protection requires
-  `ci`, because matrix legs report suffixed names; Go version from go.mod; actions
+  aggregate job named `ci` that `needs` the matrix and runs with `if: always()`,
+  failing unless every leg's result is `success`** — a job that merely `needs` a
+  failed matrix is skipped, and GitHub counts a skipped required check as passing;
+  branch protection requires `ci`, because matrix legs report suffixed names; Go version from go.mod; actions
   pinned by commit SHA (version in a comment); steps: `go build ./...`, `go vet
   ./...`, `test -z "$(gofmt -l .)"` (a bare `gofmt -l` exits 0), `go test -race
   ./...` (`-mod=readonly`), `go run golang.org/x/vuln/cmd/govulncheck@<exact
   version> ./...` (pinned; a fresh runner has none), `python3
   tools/contract-lint.py`, `git diff --check`.
-- Prove the gate bites: push one temporary commit with a failing test, link the red
-  run in the PR, drop the commit, link the green run.
+- Prove the gate bites twice: a failing test makes `ci` red (link the run), and
+  after protection is on, a PR with a deliberately failed leg cannot be merged
+  (screenshot or API output in the PR); then drop the commit and link the green run.
 - After merge (owner runs, commands in the PR body): branch protection on `main` —
   required status check `ci`, no force-push, no deletion, linear history, require the
   branch to be up to date. Record the exact `gh api` call.
 
 PR 2 — `chore: license, security policy, gitignore`
-- `LICENSE`: the owner's choice. Default: the same license mcp-sso ships (read its
-  LICENSE; do not assume); state the choice in the PR as `[decide]` if it differs.
+- `LICENSE`: the owner's choice (`[decide]`). mcp-sso ships MIT; Apache-2.0 adds an
+  explicit patent grant and NOTICE handling. Present both in the PR with that
+  tradeoff and apply the one the owner names; do not pick.
 - `SECURITY.md`: supported versions (v0 pre-release: main only), how to report (GitHub
   private vulnerability reporting, enabled in repo settings by the owner — say so),
   the response window, what counts as in scope (the binary, the container, the
@@ -35,27 +39,22 @@ PR 2 — `chore: license, security policy, gitignore`
 - `.gitignore`: the built binary, `*.test`, coverage files, `.DS_Store`, editor
   scratch. Nothing that is already tracked.
 
-PR 3 — `chore: dependency cooldown in CI and the update bot`
+PR 3 — `chore: dependency cooldown and review`
 - The floor `[decide]`: the plan assumes **15 days, majors 30** (mcp-sso's number —
   Atesaki is the same kind of boundary with a handful of dependencies); the house
-  minimum is 5/30. One number, used by both layers.
+  minimum is 5/30.
 - Bot layer: `.github/dependabot.yml` (Dependabot, not Renovate) for `gomod` and
   `github-actions` with `cooldown: default-days: <floor>, semver-major-days: 30`
   (GitHub's built-in default has been 3 days since 2026-07-14 — set ours
-  explicitly; a bot-only floor stops nothing).
-- CI layer: `tools/depage.py` (stdlib only): for every `require` in go.mod, fetch
-  `https://proxy.golang.org/<escaped module>/@v/<version>.info` (module paths are
-  escaped per the Go module reference: an uppercase letter becomes `!` plus its
-  lowercase) and read `Time`; fail if the version is younger than the floor, or 30
-  days when its major differs from the major on `origin/main` (a module new to
-  go.mod has no baseline: apply 30 days); a network failure is a CI failure, never a
-  pass; an exception needs a row in `tools/dependency-exceptions.json` with module,
-  version, advisory id (GHSA/CVE), minimum fixing version, and date — never a global
-  floor change. The proxy timestamp is a risk signal, not provenance (`go.sum` does
-  not authenticate it). Test against a fake `.info` one day old (must fail) and one
-  older than the floor (must pass). Wire it into `ci.yml`. State in the PR that
-  `go.sum` is the integrity ledger, not a lockfile: `go.mod` plus minimal version
-  selection pins the build list, checked with `go list -m all`.
+  explicitly).
+- There is **no honest CI age gate for Go**: the module proxy's `.info` `Time` is the
+  commit time of the tagged revision, not a publish time, so a freshly tagged old
+  commit passes any age test. Do not build one. Instead: GitHub's dependency-review
+  action on every PR that changes `go.mod`, and a PR template line that asks for
+  the version's publish date and age as human evidence, with the advisory id when
+  the cooldown is bypassed. Record the gap in `docs/quality-bar.md` in one sentence.
+- State in the PR that `go.sum` is the integrity ledger, not a lockfile: `go.mod`
+  plus minimal version selection pins the build list, checked with `go list -m all`.
 
 PR 4 — `fix(config): read the config file through one descriptor`
 - `Load` stats the path, then reads the path again: the size cap is advisory across
@@ -71,7 +70,28 @@ PR 5 — `refactor(config): one reserved-path source`
   list. Expose it once from `config` and use it in both. A test asserts the `routes`
   output's `reserved` equals what collision checking used.
 
-PR 6 — `docs: record slices-before-freeze; refresh STATE; reorder packets`
+PR 6 — `fix(config): empty port, redirect scheme, credential header names`
+- `checkHostPort` accepts a present but empty port (`gw.example.com:`, `[::1]:`) —
+  the unmirrored sibling of PR 6's `checkURL` fix; refuse it, with cases for a DNS
+  name, IPv4, and bracketed IPv6.
+- `checkOriginOrURL` (redirect allowlist entries) accepts `http://` on any host; the
+  inherited mcp-sso §10 allows `http` only on loopback. Implement the inherited
+  redirect-entry grammar once and apply it to configured entries; cases for an
+  origin, an exact URL, loopback IPv4, loopback IPv6, and a non-loopback `http`.
+- `upstream.credential.header` accepts any token-shaped name, including `Host`,
+  `Content-Length`, `Transfer-Encoding`, `Connection`, `Trailer`, `Upgrade`, and
+  `TE`; refuse transport, framing, and hop-by-hop names (the B1 sentence lands in
+  packet 14 item 5; write the refusal here with one case per forbidden name).
+- Every case under `testdata/refuse/` with `# expect:` naming the rule; the mirror
+  sweep listed in the PR.
+
+PR 7 — `docs: name check` — packet 09's deliverable 1, run now: `atesaki` on
+GitHub (org and repo), Go module path, container registry namespace, npm and PyPI
+collisions (informational), the search-query family and autocomplete, a trademark
+screen; each free / taken / congested; a ledger row once the owner rules (open
+question #9). No rename is performed here.
+
+PR 8 — `docs: record slices-before-freeze; refresh STATE; reorder packets`
 - `docs/decisions.md`: a 2026-09-01 row "product code proceeds slice by slice against
   the draft; each PR names the sections it implements" with receipt "PR 5 merged with
   that README line". Strike nothing; it is a new row.
@@ -86,13 +106,15 @@ LOCAL, NOT A PR: `git branch -d` the three merged branches; remove the dead
 on every Codex start); leave the Claude Code local-scope probe entries until the
 manual authorize check in STATE.md is done.
 
-HARD RULES: no product behavior changes beyond PR 4 and PR 5; nothing touches
+HARD RULES: no product behavior changes beyond PR 4, PR 5, and PR 6; nothing touches
 docs/contract*.md; every PR verified by running (`go test -race ./...`, the workflow
 itself). Windows is out of v0 (B2 uses `O_NOFOLLOW` and `Stat_t`); README says
 "Linux and macOS" in PR 2.
 
-DONE WHEN: CI is a required check on main; a red PR cannot merge; the age test runs in
-CI; both nits merged with regression tests; STATE and ledger current.
+DONE WHEN: CI is a required check on main; a red PR cannot merge (proven); Dependabot
+cooldown and dependency review in place; the three config fixes merged with
+regression tests and their mirrors; the name check reported; STATE and ledger
+current.
 
 REPORT: the red-then-green run links; the `gh api` protection call; the license
 chosen and why; anything the workflow could not run on macOS.

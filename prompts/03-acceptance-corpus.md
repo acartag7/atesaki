@@ -3,12 +3,15 @@ FALLBACK: grok-4.5
 MILESTONES: M2 (phases 0–1), M4 (phase 2), M5 (phase 3) — docs/roadmap.md.
 WHY: the tests a WRONG build fails. Atesaki's own fixture corpus, in the shared §19
 format, for everything mcp-sso's corpus does not cover. Fixtures for a slice are
-written and hash-locked before that slice's code (per-slice freeze, #55); they run red
-until the Go exists. Each focused fixture PR is owner-reviewed before merge.
+written and **slice-locked** before that slice's code (per-slice freeze, #55): their
+§19 status stays `draft` until the runner passes them; the lock is an owner-approved
+`fixtures/LOCK-<slice>.json` listing fixture hashes and the pinned contract SHAs;
+`frozen` needs a passing-runner receipt. They run red until the Go exists.
 
-RUN MODE: phases in order; a phase is many serial PRs (one behavior each). On each
-run: fetch `origin/main`, find the first incomplete phase, do the next reviewable unit,
-open one PR, stop. Later phases never start before the slice that consumes the
+RUN MODE: phases in order; a phase is several serial PRs, **one per invariant or
+protocol chain with all its fixtures** (a never, a G6 row family, a B-section's
+grammar, a delta row) — never one fixture per PR. On each run: fetch `origin/main`,
+find the first incomplete phase, do the next reviewable unit, open one PR, stop. Later phases never start before the slice that consumes the
 earlier phase has begun (phase 2 waits for M3 to start; phase 3 for M4).
 
 Read first, fully: ~/project/mcp-sso/docs/contracts/19-parity-fixture-protocol.md and
@@ -17,7 +20,7 @@ randomness stream, `{absent: true}`, RE2 matchers, `boot` kind, chains and captu
 `profile`) · docs/contract.md §4, §6, §9, §12 (nevers 1–9) · docs/contract-grants.md
 G4, G5, G6 (every row), G14 · docs/contract-boundaries.md B2–B7 · docs/deltas.md
 (every row, the ones packet 14 added included) · docs/threat-model.md ·
-schema/records/** (packet 02 phase 3) · docs/roadmap.md §M2–§M5 test tables.
+schema/records/** (packet 02 phase 2) · docs/roadmap.md §M2–§M5 test tables.
 
 PHASE 0 — THE ATESAKI FIXTURE PROFILE (blocking prerequisite; the mcp-sso schema
 admits only numeric §-clauses, mcp-sso's BridgeConfig, and mcp-sso record kinds).
@@ -89,39 +92,51 @@ call recorded:
    §8.4 portable fixture stays mcp-sso's — do not duplicate it; cite its id); an
    `inherited` fixture for every §7 token clause the verifier implements that has no
    frozen upstream fixture; `livez`/`readyz` and the drain per #61 as ruled.
-5. `boot` kind: B2 file invariants via `given.files` (symlink, hard link, wrong owner,
-   group-readable, group-writable parent, oversize); console loopback refusals; every
+5. `boot` kind: B2 file invariants via `given.files` (symlink, hard link,
+   group-readable, group-writable parent, oversize — never wrong owner, which the
+   profile cannot express and the injected-stat Go suite receipt covers); console
+   loopback refusals; every
    B1 refusal already covered by `internal/config/testdata` is NOT re-fixtured — the
    coverage map points at that suite as `suite` evidence.
-6. Every fixture `draft`; locked in one PR at the end of the phase with the owner's
-   read as the receipt (#55).
+6. Every fixture `draft`; the slice lock written in one PR at the end of the phase
+   with the owner's read as the receipt (#55); `frozen` only after packet 05's runner
+   passes them.
 
-PHASE 2 — SLICE-2 FIXTURES (M4): §4 rungs (each rung's boot refusals and acceptance;
-rung 4: duplicate assertion header, unsigned header, wrong `kid`, stale JWKS beyond
-the interval, identity headers stripped on non-identity paths, bounded refetch #58);
-never 6 (dedicated rung whose IdP rejects the redirect: the IdP error surfaces, no
-fallback); the scope-ceiling delta (#53: Codex-shaped union request on two routes);
+PHASE 2 — SLICE-2 FIXTURES (M4, the whole human loop): §4 rungs (each rung's boot
+refusals and acceptance; rung 4: duplicate assertion header, unsigned header, wrong
+`kid`, stale JWKS beyond the interval, identity headers stripped on non-identity
+paths, bounded refetch #58); never 6 (dedicated rung whose IdP rejects the redirect:
+the IdP error surfaces, no fallback); the consent-page carrier (#62): purpose and
+duration POSTed with the consent, absent from every URL and flow line, hostile
+purpose (HTML, Unicode, control characters, over cap) refused or escaped per the
+inherited page controls, policy evaluated on the submitted values; the two-stage
+ceiling (#53: catalog empty → `invalid_scope`; group ceiling empty → `access_denied`
+inherited; the Codex-shaped union request on two routes);
 `clientOriginIn` (#57); live CIMD fetch if #5 allowed: origin not on the allowlist
 refused before any network call, the inherited caps cited by clause; the limiter-
 outage delta (#60); D1, D3, D4, D5's allow branch, D6, D7, D11, D12, D13; operation
 rows A1, A2, A3 (insert), A3′, A3″, A7, A8, A9, A9′ (consumed on binding failure, not
 on wrong `resource`), A10, A10′ (replay revokes grant and family), A10″, A11 via RFC
-7009, A14's lazy transitions inside A3's cap/dedupe read and inside A9/A10, E1–E3;
+7009, A4, A5, A6, A6a (two-runner barrier as a `suite` receipt), A6b (one
+transaction, #66), the packet-12 authority fixtures by their stated intent
+(unauthorized OS user refused per verb; self-approval refused where checkable;
+`claimed_approver` never authority), A14's lazy transitions inside A3's cap/dedupe
+read and inside A6/A9/A10, E1–E3; the projector cursor (#64: a durable event reaches
+JSONL after a sink failure and a restart); never 8 and never 9 as the matrices
+written in §12 (purpose shape × duration shape × boundaries × caps × races; three
+scope mutants plus lineage on the real JWT `scope` claim); the A10 crash pair (commit
+then lost response; the client's retry ends the grant);
 identity-failure pairs per §19.2 (rejection vs port throw) for every identity path;
 Entra groups overage → the inherited identity refusal with its reason, no outbound
 call; a display name as a `groupsToScopes` key → boot refusal; an `inherited` fixture
 for every §17 identity clause this slice implements that has no frozen upstream
 fixture.
 
-PHASE 3 — SLICE-3 FIXTURES (M5): the packet-12 fixtures by their stated intent (A4,
-A5 authority: unauthorized OS user refused per verb; self-approval refused where
-checkable; the named residual documented, not tested away), A6 (two-runner claim
-race as a `suite` receipt with a barrier), A6a, A6b (freshness → invalidated), A12
-(first-issuance race, reuse, digest mismatch, tombstone, deny rule, scope outside
-declaration), A13, A14 sweeper, A15 purge idempotence; never 8 as the matrix written
-in §12 (purpose shape × duration shape × boundaries × caps × races) and never 9 as
-three independent mutants plus lineage, asserted on the real JWT `scope` claim; every
-durable reason in B7 produced by at least one fixture; every G5 state reached.
+PHASE 3 — SLICE-3 FIXTURES (M5): A12 (first-issuance race, reuse, digest mismatch,
+tombstone, deny rule, scope outside declaration) and A13 if #67 keeps machine
+clients; A14 sweeper; A15 purge idempotence; the migration and downgrade-refusal
+`boot` fixtures (#65); every durable reason in B7 produced by at least one fixture;
+every G5 state reached.
 
 HOSTILE-CONSTRUCTION RULES: build the person the title names; real foreign ids on
 every id-taking action; exact refusal, never "any 4xx"; never catch the fixture's own

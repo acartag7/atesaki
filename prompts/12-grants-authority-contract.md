@@ -14,9 +14,12 @@ DELIVERABLE — one contract-change PR:
    ruling — e.g. {osUser, subject?} entries and the self-approval rule with its named
    residual), list/pending output visibility (purpose shown or redacted — his call),
    unknown-id behavior, the audit fields each verb writes, and — if ruled — the
-   `--approver <label>` field recorded as evidence never authority, with the
-   container residual (every `kubectl exec` is one OS user) named in G13 and the
-   platform's exec audit trail as a §14 recipe obligation.
+   `--approver <label>` field recorded as `claimed_approver` — evidence, never
+   authority — with the effective uid and an invocation correlation id on every
+   verb's durable event; G13 names the model honestly as **single-operator
+   authority** (every `kubectl exec` is one OS user; Atesaki authenticates no
+   person) and the platform's exec audit trail is the human-identity source, a §14
+   recipe obligation. No sentence may read as if Atesaki authenticated a person.
 2. Ledger row in docs/decisions.md with the receipt; strike #24 in open-questions.
 3. The fixtures the new rules need, named by intent in the PR (unauthorized OS user
    refused per verb; self-approval refused where checkable; the named residual

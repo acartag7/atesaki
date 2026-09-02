@@ -1,6 +1,7 @@
 MODEL: gpt-5.6-sol   EFFORT: high   TOOL: Codex CLI in ~/project/atesaki-core (after M6)
 MILESTONE: M7 (docs/roadmap.md). PRECONDITION: `rehearse` merged (packet 15); the
-client-matrix staleness window ruled (B8 row, packet 14 item 9).
+client-matrix staleness window ruled (B8 row, packet 14 item 10); #65 landed
+(migrations, backup, hard key rotation).
 WHY: contract.md §14 — the recipe is a shipped deliverable, per-mode, every obligation
 stated; plus the container, the kustomize example, and the `idp-request` templates.
 
@@ -30,13 +31,19 @@ DELIVERABLES
    the contract states (§14, #56) and the kit must embody, pinned to the cluster
    version it was tested on: secrets, CA bundles, and CIMD documents arrive as
    `env:` from Secret keys (today's default volume mounts are root-owned symlinks and
-   B2 refuses them by design); one supported volume type named (a ReadWriteOnce
-   PersistentVolumeClaim) mounted over a path the image does not own, with `fsGroup`
-   and `fsGroupChangePolicy` so the non-root process can create the store
-   subdirectory (`0700`) on first boot — **first boot and restart proven on a real
-   cluster**, never assumed; the ingress listed in `trustedProxies` (otherwise every
-   user shares one rate-limit bucket) and applying the same request-framing rule as
-   Go's parser; **no path rewrite** at the ingress (audiences are byte-exact);
+   B2 refuses them by design); the **single-process envelope**: `replicas: 1`,
+   `strategy: Recreate` (a rolling update runs two pods on one SQLite file), a
+   `ReadWriteOncePod` claim on a named CSI storage class where available — else
+   `ReadWriteOnce` with the Recreate strategy stated as the guard — on a local
+   filesystem (WAL is not for network filesystems), and the binary's startup lock so
+   a second process refuses to start; the volume mounted over a path the image does
+   not own, with `fsGroup` and `fsGroupChangePolicy` so the non-root process can
+   create the store subdirectory (`0700`) on first boot — **first boot and restart
+   proven on a real cluster**, never assumed; **one ingress controller and version
+   pinned** (a generic `Ingress` guarantees neither framing nor buffering nor
+   timeouts nor path semantics), listed in `trustedProxies` (otherwise every user
+   shares one rate-limit bucket) and applying the same request-framing rule as Go's
+   parser; **no path rewrite** at the ingress (audiences are byte-exact);
    `livez`/`readyz` exactly as #61 rules them; TLS terminates at the ingress and the
    issuer still derives from `externalBaseUrl`; image pinned by digest;
    `readOnlyRootFilesystem: true`.
@@ -50,9 +57,12 @@ DELIVERABLES
    the grant and the agent signs in again (A10′); a group removed after activation
    does not revoke the grant — refresh rechecks nothing until expiry or revocation,
    the levers are a shorter `maxDuration` and `grants revoke`; what a store-file loss
-   means (key rotation, every token dies); audit rotation preserves every line
-   already written (reopen, never truncate) while flow-event loss stays the accepted,
-   counted residual (G12) — no losslessness claim; how active streams end at
+   means (key rotation, every token dies); the upgrade path as #65 rules it (schema
+   migration forward-only, downgrade refused, the backup command and a tested
+   restore, hard key rotation = replace, restart, every token dies); audit rotation
+   preserves every line already written (reopen, never truncate) while flow-event
+   loss stays the accepted, counted residual and durable events re-project from the
+   store (G12, #64) — no losslessness claim beyond that; how active streams end at
    shutdown (#61 as ruled); the exec audit trail of the platform is the
    accountability source for CLI approvals in a container (#24 as ruled).
 

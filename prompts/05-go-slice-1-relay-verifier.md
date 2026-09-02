@@ -1,7 +1,8 @@
 MODEL: grok-4.5   EFFORT: high   FALLBACK: gpt-5.6-terra   TOOL: Codex CLI or pi, in a fresh clone of ~/project/atesaki-core
 MILESTONE: M3 (docs/roadmap.md). PRECONDITION (per-slice freeze, #55): the sections
 below are SHA-pinned in this packet's header by the owner; packet 03 phase 1 fixtures
-hash-locked; **mcp-sso's §8 verifier fixtures frozen with receipts** — the one
+slice-locked (`fixtures/LOCK-slice-1.json`; §19 status `draft` until this runner
+passes them); **mcp-sso's §8 verifier fixtures frozen with receipts** — the one
 cross-lane input: this slice's verifier is inherited §07/§08 behavior, proven against
 the shared corpus, never re-authored here.
 PINNED: contract.md @ <sha> · contract-boundaries.md @ <sha> · contract-grants.md @
@@ -36,8 +37,10 @@ SCOPE — serial PRs, one behavior each, in this order (merge before the next):
    of its own. It also runs the frozen mcp-sso portable §8 fixtures (numeric-clause
    subset, same spine) — that run is how the verifier is proven. A test fails if any
    package outside the randomness port imports `crypto/rand`.
-2. `feat(egress): profiles, proxy, CA per destination` — one `http.Transport` per
-   profile; `fromEnv` = `http.ProxyFromEnvironment`; `none` = no proxy; URL = that
+2. `feat(egress): profiles, proxy, CA per destination, references read once` —
+   every `env:`/`file:` reference is resolved into a typed boot snapshot from the
+   same descriptor `checkSecretFile` validated (B2 "read once at boot"); nothing
+   reopens a path at request time. One `http.Transport` per profile; `fromEnv` = `http.ProxyFromEnvironment`; `none` = no proxy; URL = that
    proxy; `RootCAs` per profile from `caBundleRef`, never the global pool; TLS ≥ 1.2;
    failures name the hop (`proxy 403 at host:port`, `ECONNREFUSED`, certificate
    errors) — never a bare "fetch failed".
@@ -55,14 +58,24 @@ SCOPE — serial PRs, one behavior each, in this order (merge before the next):
    and on HTTP/2 a `Host` field beside `:authority` stays in `Header` and must
    byte-equal `Request.Host`. `Transfer-Encoding: chunked` beside `Content-Length` is
    resolved by Go's parser (chunked wins, length dropped) — the fixture pins that
-   observable; do not add a second parser. Header **bytes** via `MaxHeaderBytes`;
-   header **count** (B8) counted in the handler → `431` (Go has no count limit).
+   observable; do not add a second parser. Header **bytes** via `MaxHeaderBytes`,
+   which Go enforces with a 4 KiB read allowance and including the request line —
+   measure the real threshold on the shipped Go version and pin that observable, do
+   not assert an application byte count; header **count** (B8) counted in the
+   handler → `431` (Go has no count limit). The pre-handler time envelope (#63 as
+   ruled): `ReadHeaderTimeout`, body-read deadline, `IdleTimeout`, TLS handshake
+   timeout, listener connection cap, unauthenticated per-IP budget on `/mcp` —
+   proven with real-socket slow-header and slow-body tests, not `httptest`.
    Rate-limit identity = the B6 client IP; budgets per B8.
-4. `feat(verify): ES256 verifier, per-route metadata and challenge` — standard
-   library only (`crypto/ecdsa`, raw `R||S` signatures, `crypto/rsa` unused here);
-   the token's `alg` must equal the configured algorithm and match the key's type —
-   the allowlist never comes from the token (RFC 8725); `iss` exact; `aud` exact
-   single string = route audience; `exp` with B8 skew; `scope` ⊇ `requireScope`;
+4. `feat(verify): ES256 verifier, per-route metadata and challenge` — one mature,
+   pinned JOSE library (name it, version, publish date, age; a focused source and
+   supply-chain review in the PR) behind a narrow verifier that admits exactly the
+   contract's algorithms, key forms, and claims — compact JWS parsing (base64url
+   framing, duplicate JSON members, `crit`, claim typing) is not hand-rolled; the
+   token's `alg` must equal the configured algorithm and match the key's type — the
+   allowlist never comes from the token (RFC 8725); `iss` exact; `aud` exact single
+   string = route audience; `exp` **strict, no skew** (inherited §7.2; B8's 60 s is
+   the rung-4 assertion skew, not an access-token grace); `scope` ⊇ `requireScope`;
    duplicate `Authorization` fails closed; the per-route challenge (D1, B7); every §7
    token clause implemented here has a frozen upstream fixture or an `inherited`
    Atesaki fixture; PRM at the path-inserted location;
@@ -81,8 +94,11 @@ SCOPE — serial PRs, one behavior each, in this order (merge before the next):
 6. `feat(serve): wire the relay, flow audit, validate --deep, health, shutdown` —
    boot order: validate in full → create the store directory `0700` if absent and
    check the path under B2 → open the audit sink (B2) → listen; nothing before
-   validation passes. `livez`/`readyz` and `SIGTERM` drain exactly per #61 as ruled
-   (no upstream reachability in readiness). Flow audit
+   validation passes. `livez`/`readyz` exactly per #61 as ruled (readiness per mode
+   and capability: store directory and audit sink open, key loaded; never upstream
+   reachability); `SIGTERM` stops accepting, drains non-stream requests for the B8
+   bound, cancels every stream's context, force-closes after the bound — Go's
+   `Shutdown` alone waits forever on an open stream. Flow audit
    lines (G12 class F): JSON-encoded, one line, allowlisted fields, a formatter that
    never throws; `audit_sink_failed` counted and loud. Boot warning when listening on
    a non-loopback address with `trustProxyHeaders: false` (every user shares one
@@ -106,8 +122,9 @@ review checkpoint in `prompts/README.md`; a gap is a PR comment, then continue; 
 closed on every ambiguity; no `value || default` on a security selector; `O_NOFOLLOW`
 opens; explicit directory modes; `umask 077` at boot.
 
-VERIFY: the Atesaki runner green on every locked slice-1 fixture, zero skips, and
-green on the frozen mcp-sso §8 portable set; `serve` in front of a real local MCP
+VERIFY: the Atesaki runner green on every slice-locked slice-1 fixture, zero skips,
+and green on the frozen mcp-sso §8 portable set; the exhaustion tests end at the #63
+bounds; shutdown under live streams ends at the bound; `serve` in front of a real local MCP
 server (any stdio→HTTP server you can run — name it and its version) with a
 static-header credential: one tool call succeeds with a test-minted token; the same
 token at a second route is refused with that route's challenge; the upstream's

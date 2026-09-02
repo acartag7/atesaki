@@ -24,8 +24,9 @@ The contract pages are the authority. Where this page or a packet paraphrases a 
 to explain a gotcha, the contract's sentence wins and the paraphrase is not a rule.
 
 Rules that every milestone inherits (`prompts/README.md`, `docs/quality-bar.md`):
-one self-explanatory review unit per PR · fixtures for a slice are hash-locked before
-that slice's code starts · every implementation PR gets a packet-11 adversarial
+one self-explanatory review unit per PR — a unit is an invariant or a protocol
+chain with all its fixtures, never one test case · fixtures for a slice are
+slice-locked before that slice's code starts · every implementation PR gets a packet-11 adversarial
 review before merge · never weaken a fail-closed control to pass a test · a contract
 mismatch is a proposal plus an owner checkpoint (#52), never a silent edit · verify by
 running a real input and name it.
@@ -45,24 +46,47 @@ running a real input and name it.
 
 Ranked by what they block. Each item: what it is, what happens, what breaks if it
 stays open, where the same problem is already solved, and the recommendation the plan
-is written under.
+is written under. Items 1–10 block the authorization-server slice; 11–22 are process
+and packaging calls that can land any time before their packet.
 
-1. **#53 — Codex requests the union of advertised scopes on every route.** `[decide]`
+1. **#62 — real clients cannot send `purpose` and `requested_duration`.** `[decide]`
+   *What happens:* the 2026-09-01 probe recorded three Codex CLI 0.151.0 authorize
+   requests; none carries either parameter, and neither Codex nor Claude Code has a
+   way to add arbitrary authorize parameters — the MCP client flow is plain OAuth.
+   Under G4 as ruled (2026-08-31, 35a) the absent parameters are `invalid_request`,
+   so never 8 refuses the product's principal clients on day one. *Already solved:*
+   the consent page is already a gateway-owned, signed stage the user sees (mcp-sso
+   §9.3, approve POST with a signed consent token). *Recommend:* the consent page
+   is the carrier — two fields, purpose and duration (defaulting to the route's
+   maximum), POSTed with the consent; the policy step (G-c) runs at approve time on
+   the submitted values; a re-run after approval shows the approved values and asks
+   only approve or deny. The authorize-parameter carrier is dropped (a future client
+   that can send them gets the fields prefilled, nothing more). This reverses 35a
+   with evidence. Consequences: G4/G6 (A1–A3 move their policy predicate to approve
+   time, D5 rewritten), D3 (the consent token no longer carries purpose and
+   duration — the approve POST does, bound by the JTI), B7 rows (malformed purpose
+   or duration is refused on the approve channel), threat model (purpose never
+   travels in a URL, so it never reaches browser history, ingress logs, or referrers
+   — finding retired), and hostile-purpose fixtures (HTML, Unicode, control
+   characters, size) with the inherited page controls (HTML escaping, CSP,
+   `nosniff`, `Cache-Control: no-store`, referrer policy) cited by clause.
+2. **#53 — Codex requests the union of advertised scopes on every route.** `[decide]`
    *What happens:* Codex reads the origin AS metadata's `scopes_supported`, not the
    route's PRM, and sends the union at `/authorize`. Under the inherited §9.3 step 3 a
    scope outside the route catalog is `invalid_scope`. *If open:* every Codex login
    fails on any gateway whose routes have different catalogs — `/splunk-read` next to
    `/splunk-admin`, the shape the README sells. *Already solved:* the group ceiling
    (`groupsToScopes`) narrows silently and emits `scope_ceiling_applied`. *Recommend:*
-   make the route catalog part of the ceiling — requested scopes outside `catalog ∩
-   group ceiling` are removed, `scope_ceiling_applied` fires, the narrowed `scope`
-   is returned in the token response (RFC 6749 §5.1); an empty result is
-   `invalid_scope`. It works regardless of which metadata document a client reads,
-   and it reuses a mechanism that exists. It is a new `deltas.md` row (the reference's
-   catalog-refusal fixtures become *host*). Follow-up probe: confirm Codex accepts a
-   narrowed `scope`. Fallback if it does not: omit `scopes_supported` from the origin
-   metadata (optional in RFC 8414) and re-probe.
-2. **#5 — CIMD documents: vendored only, or opt-in live fetch.** `[decide]`
+   two stages, so two different refusals stay different: first the route catalog —
+   requested scopes outside it are removed, `scope_ceiling_applied` fires, an empty
+   result is `invalid_scope` (a new `deltas.md` row; the reference's catalog-refusal
+   fixtures become *host*); then the inherited group ceiling exactly as mcp-sso §17.4
+   has it — an empty result is `access_denied`, an entitlement refusal, never a
+   malformed-scope one. The narrowed `scope` is returned in the token response (RFC
+   6749 §5.1). Follow-up probe (packet 16): confirm Codex accepts a narrowed `scope`.
+   Fallback if it does not: omit `scopes_supported` from the origin metadata
+   (optional in RFC 8414) and re-probe.
+3. **#5 — CIMD documents: vendored only, or opt-in live fetch.** `[decide]`
    *What happens:* Codex mints one CIMD document per install per server entry. *If
    vendored-only:* onboarding needs one document per user per route collected before
    that user can sign in, which contradicts "no pre-provisioning". *Already solved:*
@@ -78,98 +102,112 @@ is written under.
    profile; when that profile is direct (`none`), the inherited validated-IP dial
    applies as written. The remaining inherited caps (document size, timeouts,
    redirects refused, content type, cache) are cited by clause. A new `deltas.md` row.
-   Vendored documents remain the default and the only mode `rehearse` needs.
-3. **#24 — who may run `atesaki grants`.** `[decide]`
-   *If open:* packet 12, then M5, cannot start; approvals have no authority model.
-   *Recommend:* the proposal as written (local CLI, the OS user's ability to open the
-   store file is the authentication boundary, approvers as `{osUser, subject?}`
-   entries, self-approval refused only where `subject` is present), with one
-   amendment: in a container every `kubectl exec` is the same OS user, so the audit
-   field `approver` would read `nonroot` for everyone. Add an optional `--approver
-   <label>` recorded as *evidence, never authority*, and make the platform's exec
-   audit trail a recipe obligation (§14). Named residual, not a hidden one.
-4. **#54 — packet 02 is superseded by the Go validator.** `[decide]`
-   *What happens:* the packet forbids Go and assumes no `validate` binary; both
-   exist, and the Go refusal suite already is the mutation suite phase 2 describes.
-   *If open:* the next session builds a second validator (JSON Schema plus Python) for
-   the same input — the parser-differential class, and double maintenance. *Already
-   solved:* `internal/config/testdata` names the rule per case. *Recommend:* drop the
-   config JSON Schema; add a mechanical B1↔parser drift test in Go (field path, type,
-   requiredness, both directions); write the G2 records as Go types and **generate**
-   `schema/records/*.schema.json` from them with a golden test, because the fixture
-   profile (packet 03) needs record schemas for `given.state`/`then.state`. The
-   fixture runner validates `given.config` with the real parser, so no config schema
-   is needed anywhere. Reverses #36's config half only.
-5. **#55 — one freeze or a rolling one.** `[decide]`
-   *What happens:* README already says "slices against the contract as it stands";
-   `prompts/README.md`, `quality-bar.md`, and packets 05–07 still gate every line of
-   Go on a single `contract-v0-freeze`. *If open:* the next implementer either
-   refuses to write Go or invents a rule. *Recommend:* freeze **per slice**: when a
-   slice starts, the sections it implements are SHA-pinned in its packet, their
-   Atesaki fixtures hash-locked, and the mcp-sso citations for those sections pinned;
-   the owner reads those pages, not all 1,400 lines at once. `contract-v0-freeze`
-   becomes the tag applied when M5's parity line is green. Record the already-made
-   "slices before freeze" decision (PR 5 merge as receipt) as a ledger row.
-6. **#56 — B2 file rules on Kubernetes.** `[decide]`
-   *What happens:* with today's default volume behavior, Secret and ConfigMap mounts
-   are symlinks into a root-owned directory and `subPath` mounts are root-owned
-   regular files (an alpha feature in Kubernetes 1.37 adds ownership fields; off by
-   default). B2 refuses both, by design. `env:` references work — for secrets and for
-   `caBundleRef`, which is already a B2 reference. `knownCimd[]` is the one field
-   with no reference form: it takes bare paths, so on the platform the config is
-   shaped for it needs image-baked or init-copied files. *If open:* packet 08
-   discovers this on the day it writes the recipe. *Recommend:* `knownCimd[]` entries
-   become B2 references (`env:` or `file:`), one small contract change now; the
-   recipe states, pinned to the Kubernetes versions it was tested on, that secrets,
-   CA bundles, and CIMD documents arrive as `env:` from Secret keys, that `file:` is
-   for hosts where the runtime user owns a `0600` regular file, and that the store
-   path is a subdirectory Atesaki creates under the volume (mount roots fail the
-   parent-directory rule).
-7. **#57 — policy rules cannot name "any Codex install".** `[decide]`
-   *What happens:* G7's `clientIn` matches exact client ids; Codex's id is a
-   per-install URL. *If open:* a route rule "auto-approve read scopes for Codex" is
-   unwritable; every user needs a rule edit. *Recommend:* add `clientOriginIn` (the
-   origin of a CIMD client id URL; exact origins, never patterns) beside `clientIn`,
-   AND-only like the rest; DCR clients have no origin and never match it.
-8. **B8 configurability** (flagged 2026-08-31) — accept fixed numbers, no `limits:`
-   block, until a deployment produces evidence. `[decide]`
-9. **Client-matrix staleness window** — 90 days. `[decide]`
-10. **Name check now, not at publish** (open question #9). The repo is already
-    public as `acartag7/atesaki` and the module path is in `go.mod`; the namespace is
-    claimed in fact. Run packet 09's name check as its own small step during M0 so a
-    bad answer arrives before more work is stamped with the name. `[decide]`
-11. **#60 — what happens when the rate limiter itself fails.** `[decide]`
-    *What happens:* the reference limiter fails **open** when it throws on authorize,
-    approve, token, and revoke (fail-closed only for stored registration); Atesaki
-    inherits that by silence, and B8 names budgets for register, authorize, and token
-    only. *If open:* an in-process fault removes abuse controls from the token-issuing
-    paths, and the implementer guesses the approve and revoke budgets. *Already
-    solved:* the decider-outage ruling (unreachable = `temporarily_unavailable`).
-    *Recommend:* limiter error = `temporarily_unavailable` on every OAuth path (a
-    delta row), and B8 gains approve = the authorize budget, revoke = the token
-    budget.
-12. **#61 — readiness and shutdown semantics.** `[decide]`
+   Vendored documents remain the default.
+4. **#24 — who may run `atesaki grants`.** `[decide]`
+   *If open:* packet 12, then the approvals in M4, cannot start. *Recommend:* the
+   proposal as written — local CLI, the OS user's ability to open the store file is
+   the authentication boundary, approvers as `{osUser, subject?}` entries,
+   self-approval refused only where `subject` is present — named honestly as a
+   **single-operator authority model**: in a container every `kubectl exec` is the
+   same uid, so Atesaki records the effective uid and an invocation correlation id,
+   labels any supplied name `claimed_approver` (evidence, never authority), and the
+   platform's exec audit trail is the human-identity source, a §14 recipe obligation.
+   No sentence may read as if Atesaki authenticated a person it did not.
+5. **#60 — what happens when the rate limiter itself fails.** `[decide]`
+   *What happens:* the reference limiter fails **open** when it throws on authorize,
+   approve, token, and revoke (fail-closed only for stored registration); Atesaki
+   inherits that by silence, and B8 names budgets for register, authorize, and token
+   only. *Already solved:* the decider-outage ruling. *Recommend:* limiter error =
+   `temporarily_unavailable` on every OAuth path (a delta row); B8 gains approve = the
+   authorize budget, revoke = the token budget.
+6. **#63 — the server has no pre-handler exhaustion envelope.** `[decide]`
+   *What happens:* B5 bounds sizes and counts and B8 bounds authenticated streams, but
+   nothing bounds time: no header-read timeout, no body-read deadline, no idle
+   timeout, no connection cap, no pre-verification per-IP budget on `/mcp`. Slow
+   headers, slow bodies, or anonymous connection churn exhaust the process before any
+   route, identity, or subject limit runs. *Recommend:* B8 rows for
+   `ReadHeaderTimeout`, body-read deadline, `IdleTimeout`, TLS handshake timeout, a
+   listener connection cap, and an unauthenticated per-IP request budget on `/mcp`;
+   real-socket slow-header and slow-body tests in M3.
+7. **#64 — durable events are not guaranteed to reach the JSONL stream.** `[decide]`
+   *What happens:* G12 says loss is possible only for flow events, but the JSONL
+   fan-out of `grant_event` rows is best-effort with no cursor or retry, so a durable
+   event can be missing from the advertised combined stream. *Already solved:* G2's
+   `grant_event.seq`. *Recommend:* the store is the durable audit of record; the JSONL
+   projector keeps a persisted cursor over `seq` and resumes on restart, so durable
+   events reach JSONL at least once (duplicates possible, deduplicated by `event_id`);
+   flow events stay lossy and counted. One cursor, no dispatcher framework.
+8. **#66 — hash bytes, A6b atomicity, A9′ error mapping.** `[decide]` *What
+   happens:* `purpose_hex` has no byte, trim, or case rule; `approved_hash` names no
+   exact member set; A6b does not say whether invalidation and the following A3/A2
+   are one transaction; A9′ lists two public errors without mapping each predicate.
+   Two implementations would hash differently and refuse differently. *Recommend:*
+   one byte-exact hash vector in G3; the approved object spelled out; A6b as one
+   transaction; every A9′ predicate mapped to one error, with a delta for any
+   inherited change.
+9. **#67 — what stays in v0.** `[decide]` The reviewer's judgment: with one
+   person merging and December the target, defer **machine clients** (G10, A12,
+   A13, D10a–D10c, tombstones) to v0.1 — a separate capability with its own rows and
+   fixtures whose removal touches nothing in the human loop — and keep **rung 4**
+   (signed proxy assertions), because "no IdP change at all" is the positioning
+   sentence and cutting it cuts the pitch. The plan below marks machine clients as
+   M5-if-kept. Reverses 2026-08-31 (machine clients in v0) if taken.
+10. **#61 — readiness and shutdown semantics.** `[decide]`
     *What happens:* B1 reserves `livePath`/`readyPath` and §14 asks the recipe to say
     how streams end at shutdown, but no sentence says what `readyz` checks or what
-    `SIGTERM` does. *If open:* the platform routes traffic before the store is open,
-    or a probe that includes upstream reachability takes a multi-route gateway out of
-    the load balancer whenever one backend flaps (the seed's own recipe did this).
-    *Recommend:* `livez` = the process serves; `readyz` = store open, signing key
-    loaded, and (from M4) the identity JWKS fetched at least once — never upstream
-    reachability, which is `validate --deep`'s job; `SIGTERM` stops accepting, drains
-    non-stream requests for a bounded time (a B8 number), ends streams, then exits.
-    Owned by M3 (packet 05) once ruled.
-13. **Dependency floor: 15 days like mcp-sso, or the 5-day house minimum.** Atesaki
-    is the same kind of boundary as mcp-sso with a handful of dependencies; slow
-    intake costs users nothing. The plan assumes 15 (majors 30). `[decide]`
+    `SIGTERM` does. *Recommend:* readiness per identity mode and per shipped
+    capability — M3: store directory and audit sink open, signing key loaded; M4
+    adds "identity JWKS fetched at boot" only for modes that fetch one (console and a
+    static `jwksRef` never do) — never upstream reachability, which is `validate
+    --deep`'s job. `SIGTERM`: stop accepting, drain non-stream requests for a bounded
+    time (B8), cancel every stream's context, force-close after the bound (Go's
+    `Shutdown` alone waits forever on an open stream).
+11. **#54 — packet 02 is superseded by the Go validator.** `[decide]`
+    *Recommend:* drop the config JSON Schema; add a mechanical B1↔parser drift test in
+    Go — parser→B1 strict at all times (no undocumented accepted field), B1→parser
+    reported as pending gaps until the slice lock, when it must be empty (otherwise
+    every contract-first PR that adds a field goes red until code lands); write the
+    G2 records as Go types and generate `schema/records/*.schema.json` from them with
+    a golden test. Reverses #36's config half only.
+12. **#55 — one freeze or a rolling one.** `[decide]`
+    *Recommend:* freeze **per slice**. Vocabulary, since §19 has no fourth status: a
+    fixture stays §19 `draft` until the runner passes it; a **slice lock** is a
+    separate owner-approved artifact (`fixtures/LOCK-<slice>.json`: fixture hashes,
+    pinned contract SHAs, the owner's read as receipt); `frozen` comes only from a
+    passing runner with a receipt. `contract-v0-freeze` is the tag when the whole
+    portable set is green.
+13. **#56 — B2 file rules on Kubernetes.** `[decide]`
+    *Recommend:* `knownCimd[]` entries become B2 references; the recipe states,
+    pinned to tested versions, that secrets, CA bundles (`caBundleRef` is already a
+    reference), and CIMD documents arrive as `env:`; **and** B2 gains the one
+    exception the code already has: the configuration file itself is read once, may
+    be a symlink (a ConfigMap mount is one), and carries the size cap but no
+    ownership or mode rule — it is the operator's input, not a secret.
+14. **#57 — policy rules cannot name "any Codex install".** `[decide]`
+    *Recommend:* add `clientOriginIn` (exact origins of CIMD client-id URLs) beside
+    `clientIn`, AND-only; DCR clients never match it.
+15. **#58 — bounded JWKS refetch on an unknown `kid`** — a number, so a ruling:
+    at most one on-demand refetch per key set per 60 s. `[decide]`
+16. **#59 — what `validate --deep` sends to an upstream** — a `GET` with no
+    credential, closed after the status line, reported as "transport path
+    reachable", never "the backend works" (a proxy block page answers too). `[decide]`
+17. **#65 — the first upgrade.** `[decide]` No store schema version, migration,
+    backup, or downgrade refusal exists, and B1 has one signing key. *Recommend:* a
+    schema-version row and forward-only migrations inside one transaction, downgrade
+    refused, SQLite online backup for the recipe, restore tested; key rotation in v0
+    is hard and honest — replace the key, restart, every token dies (B1's single key
+    stays). No key ring in v0.
+18. **B8 configurability** — accept fixed numbers, no `limits:` block. `[decide]`
+19. **Client-matrix staleness window** — 90 days. `[decide]`
+20. **Dependency floor** — 15 days like mcp-sso, majors 30. `[decide]`
+21. **LICENSE** — mcp-sso is MIT; Apache-2.0 adds an explicit patent grant and
+    notice requirements. Owner's choice; the plan carries either. `[decide]`
+22. **Name check now** (open question #9) — the repo is public and the module path
+    is in `go.mod`; run the check in M0 as its own dispatch. `[decide]`
 
-Two gaps the plan records without asking for a ruling yet, because the implementer
-will hit them and the checkpoint rule (#52) already says what to do: #58 (rung-4 JWKS
-refetch on an unknown `kid`, bounded) and #59 (what `validate --deep` may send to an
-MCP upstream as a "real read"). One wording fix rides with packet 14: B4 says `alg` is
-"never read from the token"; the executable rule is "the token's `alg` must equal the
-configured one and match the key's type, and the allowlist never comes from the
-token" (RFC 7515 requires processing the header; RFC 8725 forbids trusting it).
+One wording fix rides with packet 14: B4 says `alg` is "never read from the token";
+the executable rule is "the token's `alg` must equal the configured one and match the
+key's type, and the allowed set never comes from the token".
 
 ## 3. Milestones
 
@@ -184,10 +222,11 @@ M0 repo hardening ──► M1 config boundary (done + residuals)
    mcp-sso §8 frozen ─────┼─────────────► M3 slice 1: runner + relay + verifier + validate --deep
                           │                     │
    mcp-sso §07/09/10/11 ──┼──► 03 phase 2 ──────▼
-                          │              M4 slice 2: sign-in, store, the allow path, idp-request
-                          │                     │
+                          │              M4 slice 2: sign-in, store, the human loop (allow, escalate,
+                          │                     │        approve, claim), grants CLI, idp-request
                           └──► 03 phase 3 ──────▼
-                                         M5 slice 3: escalation, CLI, machine clients, sweeper, outbox
+                                         M5 slice 3: machine clients (if kept), sweeper, retention,
+                                                     audit projection, upgrade path
                                                 │
                                                 ▼
                                          M6 rehearse (mock IdP, client profiles)
@@ -203,18 +242,19 @@ derived from it.
 
 | Packet | Produces | Consumes | Blocking rulings | Starts when | Done when |
 | --- | --- | --- | --- | --- | --- |
-| 13 | CI, protection, license, SECURITY.md, cooldown, two config fixes, STATE/ledger | — | LICENSE; dependency floor (item 13); name check (#9) | now | CI required on `main`; red PR cannot merge |
-| 02 | B1↔parser drift test; G2 record types + generated record schemas; `knownCimd` refs | merged config code | #54 (phases 1–2); #56 (phase 3) | after 13 | drift diffs empty; records golden; phase 3 after packet 14 item 3 |
-| 14 | contract sentences for #53, #5, #56, #57, PR-5 interpretations, #58, #59, #55, #60, #61, B4 `alg` wording, B8 note, matrix window | rulings | each item's ruling | any time a ruling lands | lint green; ledger receipts; fixture ids named for 03 |
+| 16 | client compatibility spike: what Codex and Claude Code actually send and accept (authorize parameters, narrowed `scope`, `approval_pending`, per-install CIMD, consent POST) | probe server from PR 4 | — | now, two days | evidence recorded; #62, #53, #5 rulings informed |
+| 13 | CI, protection, license, SECURITY.md, cooldown, grammar fixes, STATE/ledger, name check | — | LICENSE; dependency floor; name check (#9) | now | CI required on `main`; red PR cannot merge |
+| 02 | B1↔parser drift test; G2 record types + generated record schemas; `knownCimd` refs | merged config code | #54 (phases 1–2); #56 (phase 3) | after 13 | parser→B1 empty, B1→parser pending list empty at slice lock; records golden; phase 3 after packet 14 item 3 |
+| 14 | contract sentences for #62, #53, #5, #56, #57, PR-5 interpretations and header-name rule, #58, #59, #55, #60, #61, #63, #64, #65, #66, #67, B4 `alg` wording, B8 note, matrix window | rulings; packet 16 evidence | each item's ruling | any time a ruling lands | lint green; ledger receipts; fixture ids named for 03 |
 | 12 | G13 authority text, B1 approvers row, audit fields, residuals | #24 ruling | #24 | after the ruling | lint green; fixture intent named for 03 phase 3 |
 | 03 phase 0 | fixture profile + mutation suite; manifest/catalogue tooling | record schemas (02), packet 14 sentences | — | after 02 phase 2 and 14 | profile mutation suite green |
-| 03 phase 1 | slice-1 fixtures (draft, then locked) | profile | — | after phase 0 | locked with the owner's read |
+| 03 phase 1 | slice-1 fixtures (§19 `draft`; slice lock = owner-approved hash list) | profile | — | after phase 0 | slice lock written with the owner's read |
 | 04 | threat model complete; negative matrix | 03 phase 1 ids | — | after 03 phase 1 | no attacker row without a rule; uncovered list published |
 | 05 | runner, egress, pipeline, verifier, relay, serve, `--deep`, health/shutdown | locked phase-1 fixtures; frozen mcp-sso §8 | #55, #59, #61 | after 04 and the §8 freeze | phase-1 + §8 green, zero skips; review clean; real MCP named |
 | 03 phase 2 | slice-2 fixtures | profile; packet 14 | — | alongside 05; locked before 06 | locked |
-| 06 | store port + SQLite, AS, allow path, identity ports, `idp-request` | locked phase-2 fixtures; mcp-sso §07/09/10/11 or listed deferrals | #53, #5, #57, #58, #60 | after 05 and phase 2 lock | parity line; real sign-in; review clean |
-| 03 phase 3 | slice-3 fixtures incl. packet 12's | profile; packet 12 | — | alongside 06; locked before 07 | locked |
-| 07 | approvals, claim, CLI, machine clients, sweeper, outbox | locked phase-3 fixtures; packet 12 | #24 | after 06 and phase 3 lock | every G6 row green; `contract-v0-freeze` |
+| 06 | store port + SQLite, AS, the whole human loop (allow, escalate, approve, claim, consent, exchange, rotation, revocation), the grants CLI, identity ports, `idp-request` | locked phase-2 fixtures; packet 12; mcp-sso §07/09/10/11 or listed deferrals | #62, #53, #5, #24, #57, #58, #60, #64, #66 | after 05, packet 12, and the phase-2 lock | parity line by clause; real sign-in to approval to tool call; review clean |
+| 03 phase 3 | slice-3 fixtures (machine clients if kept, sweeper, retention, projection, upgrade) | profile | #67 | alongside 06; locked before 07 | slice lock |
+| 07 | machine clients (if kept), sweeper, retention, JSONL projection with cursor, schema migration, backup | locked phase-3 fixtures | #67, #65 | after 06 and the phase-3 lock | every G6 row green; `contract-v0-freeze` |
 | 15 | `rehearse` + client profiles | runner; full AS | — | after 07 | onboarding step 4 true |
 | 08 | recipe, image, kustomize, client matrix | `idp-request` (06), profiles (15) | matrix window | after 15 | recipe run once end to end |
 | 09 | README, CHANGELOG, release workflow, sanitization in CI, listings | everything | — | after 08 | live verification named |
@@ -226,19 +266,24 @@ force-pushed or merged red; a stranger can report a vulnerability; the tree says
 what it is licensed under.
 
 **Security first.** This is the milestone that makes the later ones checkable. Go has
-no package-manager-level release-age gate, so the dependency cooldown needs two
-layers at the same value: Dependabot `cooldown` (15 days, majors 30 — item 13) **and**
-a CI test that reads each `go.mod` requirement's publish time from the module proxy
-(`@v/<version>.info`, module path escaped per the module reference: uppercase →
-`!x`) and fails on anything younger unless an exceptions file names a GHSA/CVE and
-the minimum fixing version. The proxy timestamp is a risk signal, not provenance;
-`go.sum` is the integrity ledger, not a lockfile — `go.mod` plus minimal version
-selection is what pins the build list, verified with `go list -m all`. `govulncheck`
-runs in CI from a pinned version. Builds use `-mod=readonly`. Race detector on. Linux
-and macOS in the matrix (the B2 rules use `syscall.Stat_t` and `O_NOFOLLOW`; Windows
-is out of v0 and the README says so). Actions pinned by commit; the fixture corpus is
-supply-chain input from here on (its hashes are verified before anything is
-materialized, M3).
+no package-manager-level release-age gate and the module proxy's `.info` time is the
+**commit** time, not a publish time (a freshly tagged old commit would pass any age
+test), so there is no honest second layer to build: the cooldown is Dependabot
+`cooldown` (15 days, majors 30 — item 20) plus GitHub's dependency-review check on
+every PR that touches `go.mod`, plus the PR template asking for the version's publish
+date and age as human evidence. `go.sum` is the integrity ledger, not a lockfile —
+`go.mod` plus minimal version selection is what pins the build list, verified with
+`go list -m all`. `govulncheck` runs in CI from a pinned version. Builds use
+`-mod=readonly`. Race detector on. Linux and macOS in the matrix (the B2 rules use
+`syscall.Stat_t` and `O_NOFOLLOW`; Windows is out of v0 and the README says so).
+Actions pinned by commit; the fixture corpus is supply-chain input from here on (its
+hashes are verified before anything is materialized, M3). Two grammar defects found
+in review are fixed here, with their mirrors: `checkHostPort` accepts a present but
+empty port (`gw.example.com:`) — the unmirrored sibling of PR 6's URL-port fix — and
+the redirect-allowlist grammar accepts `http://` on any host where the inherited §10
+allows it only on loopback; a static credential header name may be a transport or
+hop-by-hop field (`Host`, `Content-Length`, `Transfer-Encoding`, `Connection`) and
+must be refused.
 
 **Tests.** Prove the gate bites: the CI PR carries one deliberately failing test in a
 temporary commit, shows red, drops the commit, shows green. The dependency-age test
@@ -248,11 +293,13 @@ runs against a fake `.info` response that is one day old and must fail.
 
 | PR | Content |
 | --- | --- |
-| `ci: build, vet, gofmt, race tests, govulncheck, contract lint` | matrix job plus one aggregate `ci` job that branch protection requires (matrix legs have suffixed names); `gofmt` output tested, not printed; protection: no force-push, no deletion, required check, linear history |
+| `ci: build, vet, gofmt, race tests, govulncheck, contract lint` | matrix job plus one aggregate `ci` job that branch protection requires — with `if: always()` and an explicit check that every leg succeeded (a skipped required check counts as passing on GitHub); `gofmt` output tested, not printed; protection: no force-push, no deletion, required check, linear history; proven by a deliberately failed leg that cannot merge |
 | `chore: license, security policy, gitignore` | LICENSE (owner picks; Apache-2.0 matches the rest of the family unless told otherwise), `SECURITY.md` with the disclosure channel, `.gitignore` for the binary and local scratch |
-| `chore: dependency cooldown in CI and Dependabot` | the age test, the exceptions file format, Dependabot `cooldown` at the same floors |
+| `chore: dependency cooldown and review` | Dependabot `cooldown` at the ruled floor, dependency-review on PRs, PR template evidence line; no commit-age script |
 | `fix(config): read the config file through one descriptor` | open → `fstat` for the regular-file check → read through `io.LimitReader(cap+1)` and refuse past the cap; the cap is enforced by the reader, so no size-then-read race exists (the secret-file path already opens once; the config path stats the name then reads the name — the TOCTOU sibling) |
 | `refactor(config): one reserved-path source` | `main.go` and `validate.go` each carry the list today |
+| `fix(config): host:port with an empty port, redirect scheme, credential header names` | the three grammar defects above, each with a refusal case and its mirrors (IPv4, bracketed IPv6, origin, exact URL) |
+| `docs: name check` | packet 09's deliverable 1 run now as a report and a ledger row (open question #9) |
 | `docs: record slices-before-freeze; refresh STATE; reorder packets` | ledger row with the PR 5 receipt; lane-1 rows corrected; `prompts/README.md` in this page's order |
 
 Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`probe-b`
@@ -261,7 +308,7 @@ entries from the Codex global config (they error on every Codex start).
 **Gates.** Start: none. Done: CI required on `main`; a red PR cannot merge; lint and
 tests green on the hardened tree.
 
-**Decisions:** LICENSE choice; the dependency floor (item 13); the name check (item 10, open question #9).
+**Decisions:** LICENSE (item 21); the dependency floor (item 20); the name check (item 22).
 
 ### M1 — Config boundary (done) + residuals
 
@@ -280,9 +327,11 @@ test parses the B1 tables in `contract-boundaries.md` (field path, type cell,
 required/optional per variant) and compares them, both directions, with the field
 registry the parser exposes. The registry records every accessor call, present or
 absent, so an optional field no example uses is still registered; a variant branch
-never executed shows up as a B1→parser miss. A field in one place and not the other
-fails. This is the executable form of "B1 is not claimed complete until the artifact
-exists". The record drift test compares G2's field lists **and** which G6 row sets
+never executed shows up as a B1→parser miss. The parser→B1 direction fails at all
+times (an undocumented accepted field is a defect); the B1→parser direction is a
+pending list, printed on every run and required empty at each slice lock, so a
+contract-first PR that adds a field does not go red until the code lands. This is
+the executable form of "B1 is not claimed complete until the artifact exists". The record drift test compares G2's field lists **and** which G6 row sets
 each state-dependent field, so ownership by state is checked, not just names.
 
 **Implement** (packet 02, rescoped):
@@ -334,7 +383,8 @@ reason code — each refused by name).
 
 | Step | Packet | Content |
 | --- | --- | --- |
-| 1 | 14 | contract closure: #53 scope ceiling (new deltas row), #5 live fetch key and its inherited guards, #56 `knownCimd` refs, #57 `clientOriginIn`, the token response's narrowed `scope`; one small PR per item, lint green, fixtures listed as drafts |
+| 0 | 16 | the two-day client spike against the PR-4 probe server: what Codex and Claude Code send at authorize (no custom parameters — confirm), whether they accept a narrowed `scope`, how they surface `approval_pending` and `request_id`, whether a consent page with two extra fields completes, per-install CIMD stability; conclusions into open questions #62, #53, #5 |
+| 1 | 14 | contract closure, one ruling per PR: #62 the consent-page carrier, #53 two-stage ceiling (new deltas row), #5 live fetch with its allowlist, #56 `knownCimd` refs and the config-file exception, #57 `clientOriginIn`, the PR-5 interpretations and the credential header-name rule, #58, #59, #55 slice-lock vocabulary, #60, #61, #63, #64, #65, #66, #67, B4 `alg` wording, B8 note, matrix window; lint green; fixtures named as drafts |
 | 2 | 12 | grants authority (#24 ruling): G13 authority text, B1 approvers row, audit fields per verb, the container residual; its fixtures are named by intent and written in 03 phase 3 |
 | 3 | 03 phase 0 | the Atesaki fixture profile (`fixtures/schema/atesaki-fixture.schema.json`): mcp-sso spine + G/B/D/never clause ids + `given.config` as the Atesaki stream (validated by the real parser in the runner) + records from `schema/records/*` + B7 reasons with class + `given.files` for B2 boot fixtures under a containment contract (relative paths only, link targets inside the root, no ownership simulation, count and byte caps); the manifest's clause inventory includes B1 (the config refusal suite as `suite` evidence) and B8 (each number exercised at its boundary); its mutation suite |
 | 4 | 03 phase 1 | slice-1 fixtures: relay §6, nevers 1, 3, 5, 7, B3 host and target grammar, B5 caps, B6 forwarded walk, B7 rows the relay reaches; `MANIFEST.json`/`CATALOGUE.md` generated; every fixture `draft` |
@@ -367,9 +417,20 @@ change).
   HTTP/1.1 `Host` fields are refused `400` by `net/http` (no audit line is possible);
   `Transfer-Encoding: chunked` beside `Content-Length` is resolved the RFC 9112 §6.3
   way — chunked wins and the length is dropped before dispatch; header **bytes** are
-  capped by `MaxHeaderBytes` while the header **count** (B8) is counted in the
+  capped by `MaxHeaderBytes`, which Go enforces with a 4 KiB read allowance and
+  including the request line — so B8's 64 KiB is enforced as that observable, with
+  the exact threshold measured on the shipped Go version and pinned by fixture, not
+  asserted as an application byte count; the header **count** (B8) is counted in the
   handler because Go has no count limit. Fixtures pin those observables; the recipe
   requires the ingress to apply the same framing rule.
+- *Time bounds before identity* (#63): header-read timeout, body-read deadline, idle
+  timeout, TLS handshake timeout, a listener connection cap, and an unauthenticated
+  per-IP budget on `/mcp` — proven with real-socket slow-header and slow-body tests,
+  not with `httptest`.
+- *References are read once, through the validated descriptor:* `checkSecretFile`
+  today validates a file and closes it; `serve` resolves every `env:`/`file:`
+  reference into a typed boot snapshot from the same descriptor it validated, and
+  nothing reopens a path at request time (B2's "read once at boot").
 - *Relay is hand-built, not `httputil.ReverseProxy`:* the reverse proxy adds
   `X-Forwarded-For` and forwards headers by blocklist; §6 requires allowlists both
   ways. Upstream host and path come from config; the inbound request contributes a
@@ -385,11 +446,15 @@ change).
 - *Egress:* one transport per profile; `fromEnv` = `http.ProxyFromEnvironment`, `none`
   = nil proxy, URL = fixed proxy; `RootCAs` per profile, never the global pool;
   TLS ≥ 1.2; a proxy CONNECT failure is reported as `proxy <code> at <host>:<port>`.
-- *Verifier:* ES256 with the stdlib (`crypto/ecdsa`, raw `R||S` signatures, not
-  ASN.1); the token's `alg` must equal the configured algorithm and match the key's
-  type, and the allowlist never comes from the token; `aud` exact single string,
-  `iss` exact, `exp` with B8 skew, `scope` ⊇ `requireScope`. No general JWT library:
-  the two algorithms the contract allows are the only code paths that exist.
+- *Verifier:* one mature, pinned JOSE library after a source and supply-chain
+  review, wrapped by a narrow verifier that admits exactly the contract's algorithms,
+  key forms, and claims — the house rule is "never hand-roll parsing over untrusted
+  input when a proven library exists", and compact JWS parsing (base64url framing,
+  duplicate JSON members, `crit`, claim typing) is that surface. The token's `alg`
+  must equal the configured algorithm and match the key's type, and the allowed set
+  never comes from the token; `aud` exact single string; `iss` exact; `exp` strict
+  with **no skew** (inherited §7.2 — B8's 60 s is the rung-4 assertion skew, not an
+  access-token grace); `scope` ⊇ `requireScope`.
 - *Rate-limit identity:* the client IP from B6. A deployment whose ingress is not in
   `trustedProxies` puts every user in one bucket — `serve` warns at boot when it
   listens on a non-loopback address with `trustProxyHeaders: false`.
@@ -403,6 +468,7 @@ change).
 | Atesaki fixtures (03 phase 1) | relay rules, nevers 1/3/5/7, B3/B5/B6/B7 rows — zero skips |
 | mcp-sso portable | the frozen §8 verifier set by fixture id, run by the same runner; every §7 token clause the verifier implements has a frozen upstream fixture **or** an Atesaki fixture marked `inherited` that quotes the same sentence — no inherited clause is implemented untested because the lane lags |
 | Unit | grammars, header parsing, forwarded walk, target parsing — table-driven, one row per B3/B6 sentence |
+| Exhaustion | real sockets: slow headers, slow bodies, idle connections, anonymous stream churn, shutdown under live streams — each ends at the #63 bound |
 | Real input | `serve` in front of a named local MCP server (any stdio→HTTP server you can run) with a static-header credential: one tool call succeeds with a test-minted token; the same token at a second route is refused with that route's challenge; the upstream's recorded request headers contain no bearer token (never 1) |
 | Negative matrix | every slice-1 row flips from planned to a fixture id |
 | Randomness lint | a test fails if any package outside the randomness port imports `crypto/rand` (fixture determinism) |
@@ -412,9 +478,9 @@ change).
 | PR | Content |
 | --- | --- |
 | `feat(runner): load and validate Atesaki fixtures` | manifest hash check **before** anything is materialized; `given.files` built under `os.Root` (relative paths only, no `..`, link targets inside the root, modes as stated, no ownership simulation — the owner-mismatch rule stays a unit test with an injected stat; count and byte caps); profile validation, chain ordering, clock/randomness/keys/recorded-HTTP ports, exact comparison, absence assertions, RE2 matchers; skipped locked fixture = failure |
-| `feat(egress): profiles, proxy, CA per destination` | the one outbound layer; hop-naming errors |
+| `feat(egress): profiles, proxy, CA per destination` | the one outbound layer; hop-naming errors; references resolved once into the boot snapshot |
 | `feat(http): caps, authority, target parsing, host and origin gate` | the pipeline order above; B6 walk |
-| `feat(verify): ES256 verifier, per-route metadata and challenge` | PRM at the path-inserted location, AS metadata documents at the origin, challenge per route (D1) |
+| `feat(verify): ES256 verifier, per-route metadata and challenge` | pinned JOSE library behind the narrow verifier; PRM at the path-inserted location, AS metadata documents at the origin, challenge per route (D1) |
 | `feat(relay): allowlisted relay with streaming and cancel` | §6 in full |
 | `feat(serve): wire the relay, flow audit, validate --deep, health, shutdown` | boot order: validate → open store path (create dir `0700`) → open audit sink → listen; `livez`/`readyz` and `SIGTERM` drain per #61; `--deep` per #59 |
 | `test(e2e): real MCP behind the relay` | the named real input |
@@ -426,184 +492,190 @@ implements has a frozen upstream or an `inherited` Atesaki fixture, or is named 
 uncovered in the parity line and excluded from the capability claim; packet-11
 review clean; real input named in the PR.
 
-**Decisions:** #55, #59, #61.
+**Decisions:** #55, #59, #61, #63, and the JOSE library choice.
 
-### M4 — Slice 2: sign-in, the store, the allow path, `idp-request`
+### M4 — Slice 2: sign-in, the store, the human loop, `idp-request`
 
 **You can now:** point Claude Code or Codex at `https://host/route/mcp`. It discovers
 the route, registers (CIMD or DCR), the user signs in with the company login (Entra,
-generic OIDC, a signed proxy assertion, or the loopback console), the agent states a
-purpose and a duration, the consent page shows exactly those, and — where a route rule
-says `allow` — the agent gets tokens and calls a tool. A request no rule allows ends
-with `approval_pending` and a request id (nobody can approve yet; M5). `atesaki
-idp-request` prints the ticket for the IdP team. RFC 7009 revokes a grant.
+generic OIDC, a signed proxy assertion, or the loopback console), states a purpose
+and a duration on the consent page, and — where a route rule says `allow` — the
+agent gets tokens and calls a tool. Where nothing allows it, the flow ends with
+`approval_pending` and a request id; `atesaki grants pending` shows it, `grants
+approve <id>` narrows and approves, the user runs the flow again, sees the approved
+values, approves, and the tool call works. `grants deny`, `grants revoke`, and RFC
+7009 end access within one access TTL. `atesaki idp-request` prints the ticket for
+the IdP team. This is the product promise for people; machines come next.
 
-*Why this split:* the smallest deployable sign-in needs SQLite (`serve` refuses the
-memory adapter) and the allow path (A1, A7, A8, A9, A10, A11). Building those here
-puts the store port, the two-phase discipline (G8), and the conformance suite in place
-one slice earlier, on the rows with the fewest branches. M5 adds the rows with humans
-and machines in them.
+*Why this shape:* under the default policy everything escalates, so a slice without
+approvals ends every default flow in a dead end and proves nothing about the loop
+onboarding sells. The store, the two-phase discipline (G8), the conformance suite,
+and the whole interactive operation table land here on rows with humans in them;
+M5 adds the rows with machines and clocks in them.
 
 **Security first.**
 
-- *Parity is the rigor:* every §07/§09/§10/§11/§17 clause is inherited by fixture;
-  every deviation is a `deltas.md` row or a bug. The dangerous corners — PKCE, `state`,
-  consent-token signing and JTI consumption, code binding, refresh rotation and the
-  theft response, redirect allowlisting — are the reference's, proven by the shared
-  corpus.
-- *Scope ceiling* (#53): effective scopes = requested ∩ catalog ∩ group ceiling;
-  never 9 holds by construction; the narrowed `scope` goes back in the token response.
+- *Parity is the rigor, by clause:* every inherited clause this slice implements has
+  a frozen upstream portable fixture or an `inherited` Atesaki fixture quoting the
+  same sentence; the parity line names clauses, never whole sections (§17 also
+  contains device flow and stored machine registration that Atesaki does not ship);
+  a mode ships only when every portable fixture relevant to it passes — otherwise the
+  mode is deferred, not a failure inside its claim. Every deviation is a `deltas.md`
+  row or a bug.
+- *The consent page is the carrier* (#62 as ruled): purpose and duration arrive by
+  POST with the signed consent, never in a URL; hostile purpose text (HTML, Unicode,
+  control characters, size) is refused or escaped per the inherited page controls
+  (HTML escaping, CSP, `nosniff`, `no-store`, referrer policy); the policy step runs
+  on the submitted values; the JTI binds one submission.
+- *Scope ceiling in two stages* (#53): catalog narrowing (`invalid_scope` when
+  empty), then the inherited group ceiling (`access_denied` when empty); never 9
+  holds by construction; the narrowed `scope` goes back in the token response.
+- *Approve-then-swap:* the claim (A6) is a CAS on `requested_hash` plus tuple; the
+  grant is created with the **approved** values; freshness re-check (A6b) against
+  current policy and ceiling, in one transaction (#66 as ruled).
+- *Two concurrent claims:* exactly one wins; the loser proceeds as A3 in a new
+  transaction (A6a) — proven with a deterministic barrier, never by repetition.
+- *CLI authority* (#24 as ruled): the store file's permissions are the boundary;
+  ids are exact; the effective uid and a correlation id are recorded; a supplied
+  name is `claimed_approver`, evidence only.
 - *Identity ports:* inherited, not reinterpreted. The id_token is verified (issuer,
   audience, nonce, expiry, signature under the fetched JWKS); groups come from the
-  claim only. Entra, exactly as mcp-sso §17 says: a groups **overage** (the claim
-  replaced by an overage marker) is an identity refusal with its named audit reason,
-  never a Graph call and never a silent empty ceiling; group identifiers are object
-  ids (GUIDs) only — display names are not unique and are refused as `groupsToScopes`
-  keys. `idp-request` asks the IdP team for group filtering or app-assigned groups so
-  overage cannot happen for the app.
+  claim only. Entra, exactly as mcp-sso §17 says: a groups overage is an identity
+  refusal with its named audit reason, never a Graph call and never a silent empty
+  ceiling; group identifiers are object ids (GUIDs) only. `idp-request` asks the IdP
+  team for group filtering or app-assigned groups so overage cannot happen.
 - *Rung 4:* B4 in full; `alg` pinned per key; `kid` exact; identity headers stripped
   everywhere but the identity leg; JWKS through the egress profile, size and count
   caps, stale-interval refusal; #58 bounds the refetch on an unknown `kid`.
 - *Console pairing:* loopback only, before any state write; the pairing code is
   printed, never audited.
 - *CIMD live fetch* (#5, if allowed): only for a document URL whose origin is on the
-  operator's exact allowlist; the inherited caps (document size, timeouts, redirects
-  refused, content type, cache) cited by clause; the validated-IP dial applies when
-  the profile is direct, and the allowlist is the SSRF control when it is a proxy.
+  operator's exact allowlist; the inherited caps cited by clause; the validated-IP
+  dial when the profile is direct.
 - *Store:* the driver is chosen and pinned **first**, and its open semantics proven
   by an integration test before any G6 row lands: how it opens the main file, how it
-  creates `-wal`/`-shm` (SQLite's Unix VFS gives sidecars the database file's mode,
-  so a `0600` database yields `0600` sidecars — the test observes it for the driver
-  actually used), whether it honors no-follow on open. B2 for the store is then
-  enforced as: the directory is Atesaki's (`0700`, created by it, held open), the
-  database file is created by Atesaki with `O_EXCL` and `0600` before the driver ever
-  sees the path, and after the driver opens, the path is re-opened with `O_NOFOLLOW`
-  and its inode compared with the file Atesaki created — a swap inside a directory
-  only this user can write is the same-user case B2 does not defend against, and the
-  contract says so. WAL, `busy_timeout`, `BEGIN IMMEDIATE` for every writing
-  transaction (a deferred transaction that reads then writes fails with
-  `SQLITE_BUSY_SNAPSHOT` under a concurrent writer and the busy handler cannot retry
-  it), `synchronous=FULL`. If the pinned driver cannot meet a B2 sentence, that is a
-  contract gap reported before the adapter merges, never a weakened check.
+  creates `-wal`/`-shm` (SQLite's Unix VFS gives sidecars the database file's mode —
+  observed for the driver actually used), whether it honors no-follow. B2 for the
+  store: the directory is Atesaki's (`0700`, created by it, held open); the database
+  file is created by Atesaki with `O_EXCL` and `0600` before the driver sees the
+  path; after the driver opens, the path is re-opened with `O_NOFOLLOW` and its inode
+  compared with the file Atesaki created. `database/sql` with **one connection**
+  (`SetMaxOpenConns(1)`) so per-connection pragmas (`busy_timeout`, foreign keys,
+  `synchronous=FULL`) and `BEGIN IMMEDIATE` apply to every transaction; WAL; a
+  schema-version row and forward-only migrations in one transaction, downgrade
+  refused (#65); local filesystem only — WAL is not for network filesystems. A B2
+  sentence the driver cannot meet is a contract gap reported before the adapter
+  merges, never a weakened check.
 - *Two-phase discipline (G8):* ids and tokens are produced in preflight; the
   transaction holds only authoritative reads, CAS predicates, mutations, durable
   events; the response is written after commit; E1 on a lost response.
-- *Canonical JSON for hashes (G3):* RFC 8785 — Go's `encoding/json` is not JCS (it
-  escapes U+2028/2029 even with HTML escaping off, and JCS orders keys by UTF-16 code
-  units); use a pinned JCS implementation after supply-chain review, or a purpose-
-  written canonical serializer for the fixed G3 shapes, and test either against the
-  RFC 8785 vectors. No "the encoder is close enough" argument.
-- *Lazy expiry is this slice's, not M5's:* every cap and dedupe read in A3, and every
-  A9/A10 read, first transitions past-due rows it touches (G5) inside the same
-  transaction, or expired pending rows keep consuming the cap — a cheap denial of
-  authorization. M5 adds the sweeper.
+- *Durable events reach the JSONL stream* (#64): the projector keeps a persisted
+  cursor over `seq`; restart resumes; duplicates deduplicated by `event_id`; flow
+  events stay lossy and counted.
+- *Canonical JSON for hashes (G3):* RFC 8785 via a pinned JCS implementation or a
+  purpose-written canonical serializer for the fixed G3 shapes, tested against the
+  RFC vectors and against the byte-exact vector #66 adds; Go's `encoding/json` is not
+  JCS.
+- *Lazy expiry is this slice's:* every cap and dedupe read in A3, and every A6, A9,
+  A10 read, first transitions past-due rows it touches (G5) inside the same
+  transaction, or expired pending rows keep consuming the cap. M5 adds the sweeper.
 - *Limiter outage* (#60 as ruled): never fail open on a token-issuing path.
-- *Timing-safe comparison* for client secrets, machine secrets, and the pairing code
-  (compare digests with `subtle.ConstantTimeCompare`).
-- *Rate limits* per client IP after B6 on register, authorize, token.
+- *Timing-safe comparison* for client secrets and the pairing code.
+- *The refresh race clients will hit:* a retried refresh after a lost response is a
+  replay and ends family and grant (A10′). Stated in the recipe, and crash-tested
+  here on both sides of the commit.
 
 **Tests.**
 
 | Kind | What |
 | --- | --- |
-| mcp-sso portable | the pinned corpus version + `MANIFEST.json` hash; the exact frozen portable fixture-id set this build passes, listed in the PR before code; zero skips; deferred ids listed with reasons |
-| Atesaki fixtures (03 phase 2) | rungs §4 (each rung's boot refusals and acceptance; rung 4 duplicate header, unsigned header, wrong `kid`, stale JWKS, header stripping), D1, D3, D4, D5's allow branch, D6, D7, D11, D12, D13, never 6, A1, A2, A3 insert, A3′, A3″, A7, A8, A9, A9′, A10, A10′, A10″, A11 (RFC 7009 path), A14 lazy expiry for these rows, E1–E3, the scope-ceiling delta, #57 rules, the limiter-outage delta, Entra overage refusal; plus an `inherited` fixture for every §17 identity clause this slice implements that has no frozen upstream fixture |
-| Store conformance suite | one table per G6 row this slice implements: atomicity, CAS, uniqueness, ordering-free comparison; both adapters; `serve` refuses memory |
-| Crash tests | named failpoints between preflight and commit, and between commit and response, for A8 and A9; restart; exact state (nothing consumed / committed-with-E1) |
-| Real input | Claude Code and Codex CLI (versions named) through Entra or generic OIDC to a tool call; Codex on two routes with different catalogs (the #53 case); the console rung on a laptop |
+| mcp-sso portable | the pinned corpus version + `MANIFEST.json` hash; the exact frozen portable fixture-id set this build passes, listed in the PR before code; zero skips; deferred ids listed with reasons and the modes they defer |
+| Atesaki fixtures (03 phase 2) | rungs §4 (each rung's boot refusals and acceptance; rung 4 duplicate header, unsigned header, wrong `kid`, stale JWKS, header stripping, bounded refetch); never 6; the consent-page carrier (#62) with hostile-purpose cases; the two-stage ceiling (#53); `clientOriginIn` (#57); live-fetch allowlist (#5); the limiter-outage delta (#60); Entra overage refusal; D1, D3, D4, D5, D6, D7, D11, D12, D13; A1–A11 with every branch (A3′, A3″, A6a, A6b, A9′, A10′, A10″), A14's lazy path, E1–E3; the projector cursor (#64); never 8 and never 9 as the matrices in §12; an `inherited` fixture for every §7/§9/§10/§11/§17 clause implemented here without a frozen upstream fixture |
+| Store conformance suite | one table per G6 row this slice implements: atomicity, CAS, uniqueness, ordering-free comparison; both adapters; under contention; `serve` refuses memory |
+| Crash tests | the mutable-state × exit-path matrix for every response-returning row this slice ships — A6, A8, A9, **A10** — with named failpoints between preflight and commit and between commit and response; restart; exact state (nothing consumed / committed-with-E1); for A10, the client's retry after the lost response is constructed and its A10′ outcome asserted |
+| Race | the two-runner claim with a barrier at the CAS |
+| Real input | Claude Code and Codex CLI (versions named) through Entra or generic OIDC: sign-in, consent page with purpose and duration, tool call on an `allow` route; on a default route: `approval_pending` → `grants approve` (narrowed) → re-run → consent shows the approved values → tool call → `grants revoke` → refresh refused, access dies at TTL; Codex on two routes with different catalogs (the #53 case); the console rung on a laptop; how each client surfaces `approval_pending` and where the user finds `request_id` |
 | `idp-request` | golden output per provider; contains no secret; lists what it does not need |
 
-**Implement** (packet 06, rescoped):
+**Implement** (packet 06, rescoped; one PR per invariant or chain, not per test):
 
 | PR | Content |
 | --- | --- |
 | `feat(store): port, memory adapter, conformance suite` | the interface, the suite as the contract, memory passes |
-| `feat(store): sqlite adapter` | pinned driver with its open/sidecar semantics proven by test first; WAL, pragmas; the B2 enforcement above; passes the suite under contention |
-| `feat(as): metadata, stateless DCR, CIMD` | origin AS metadata; DCR per §9.2; vendored CIMD; live fetch behind its key |
-| `feat(as): authorize steps 1–4, ceiling, purpose and duration` | §9.3 1–4 exactly, G-a/G-b carriers (singleton guard, signed bridge params, console round trip), #53 |
-| `feat(policy): built-in rules, allow and deny` | G7 vocabulary incl. `clientOriginIn`; escalate by default; `policy_version` |
-| `feat(grants): A1, A2, A3 insert, A3′, A3″, lazy expiry` | consent signed with `request_id` (D3); escalation ends the pass with `approval_pending`; the A14 lazy transition for every row this slice reads |
-| `feat(grants): consent, exchange, rotation, revocation` | A7, A8, A9, A9′, A10, A10′, A10″, A11 via RFC 7009; G8 sign-before-commit; G9 expiry propagation; D4 claims |
-| `feat(identity): entra, oidc` | redirect flow, id_token verification, groups; subject boundary §6.5 |
+| `feat(store): sqlite adapter` | pinned driver with its open/sidecar semantics proven by test first; one connection; pragmas; schema version and migrations; the B2 enforcement above; passes the suite under contention |
+| `feat(as): metadata, stateless DCR, CIMD` | origin AS metadata; DCR per §9.2; vendored CIMD; live fetch behind its key and allowlist |
+| `feat(as): authorize steps 1–4 and the two-stage ceiling` | §9.3 1–4 exactly, `resource` required (D13), #53 |
+| `feat(policy): built-in rules` | G7 vocabulary incl. `clientOriginIn`; escalate by default; `policy_version` |
+| `feat(grants): consent page carrier, A1–A3 with lazy expiry` | purpose and duration on the page (#62); policy at approve time; escalation ends with `approval_pending`; A14's lazy path in every read |
+| `feat(grants): approvals A4, A5 and the claim A6, A6a, A6b` | with the authority contract from packet 12 |
+| `feat(cli): grants list, pending, approve, deny, revoke` | OS-user authentication, exact-id lookup, `claimed_approver`, audit fields |
+| `feat(grants): consent, exchange, rotation, revocation` | A7–A11; G8 sign-before-commit; G9 expiry propagation; D4 claims; A10 crash matrix |
+| `feat(audit): durable event projection with a cursor` | #64; loss counter for flow events |
+| `feat(identity): entra, oidc` | redirect flow, id_token verification, groups as GUIDs, overage refusal; subject boundary §6.5 |
 | `feat(identity): header assertion, console pairing` | B4 in full; loopback-only pairing |
 | `feat(cli): idp-request` | per-provider templates, the does-not-need list |
-| `test(e2e): real sign-in to tool call` | the named clients and versions |
+| `test(e2e): real sign-in, approval, and tool call` | the named clients and versions |
 
-**Gates.** Start: M3 done; 03 phase 2 fixtures locked; the mcp-sso §07/§09/§10/§11
-portable set frozen **or** the exact not-yet-frozen ids listed as deferred in the
-packet (the lane may lag; the parity line says so, nothing is skipped silently).
-Done: parity line published; every deferred id named; every inherited clause this
-slice implements has a frozen upstream or an `inherited` Atesaki fixture, or is named
-uncovered and excluded from the capability claim; real sign-in shown; packet-11
-review clean.
+**Gates.** Start: M3 done; packet 12 landed; 03 phase 2 slice-locked; the mcp-sso
+§07/§09/§10/§11 portable set frozen **or** the exact not-yet-frozen ids listed as
+deferred with the modes they defer. Done: parity line by clause; every inherited
+clause has a frozen upstream or an `inherited` fixture, or its mode is deferred; the
+real input above shown; packet-11 review clean.
 
-**Decisions:** #53, #5, #57, #58, #60.
+**Decisions:** #62, #53, #5, #24, #57, #58, #60, #64, #66.
 
-### M5 — Slice 3: dispensing complete
+### M5 — Slice 3: machines, clocks, and the upgrade path
 
-**You can now:** `atesaki grants pending` shows what waits; `grants approve <id>`
-narrows and approves; the requester re-runs and the consent page shows the approved
-values; `grants deny`, `grants revoke`; unattended agents are declared as machine
-clients and get bounded, revocable, tombstone-guarded tokens; expiry fires on time;
-terminal rows purge; every state transition is a durable event fanned out to JSONL
-with a loss counter. This is the product promise, running.
+**You can now:** unattended agents, if #67 keeps them in v0, are declared as
+machine clients and get bounded, revocable, tombstone-guarded tokens; expiry fires
+on time without waiting for a request; terminal rows purge; the store has a schema
+version, a migration path, a backup command, and a documented hard key rotation.
 
 **Security first.**
 
-- *Approve-then-swap:* the claim (A6) is a CAS on `requested_hash` plus tuple; the
-  grant is created with the **approved** values; freshness re-check (A6b) against
-  current policy and ceiling.
-- *Two concurrent claims:* exactly one wins; the loser proceeds as A3 in a new
-  transaction (A6a) — proven with a deterministic barrier, never by repetition.
-- *CLI authority* (#24 as ruled): the store file's permissions are the boundary;
-  ids are exact, no enumeration on the public surface; `--approver` is evidence.
-- *Machine issuance:* requested ⊆ declared; deny-only rules; tombstone on the
-  per-route digest; one active grant per (client, resource) with the losing insert
-  discarding its signed token and retrying once as reuse (A12).
+- *Machine issuance* (if kept): requested ⊆ declared; deny-only rules; tombstone on
+  the per-route digest; one active grant per (client, resource) with the losing
+  insert discarding its signed token and retrying once as reuse (A12).
 - *Sweeper and lazy expiry:* exactly one event per expiry, inside the operation's own
   transaction; retention purge idempotent (A15).
-- *Outbox:* durable rows committed with the change; JSONL fan-out best-effort with
-  `audit_sink_failed` counted and loud; purpose appears in exactly two durable events
-  and no flow line; free text never enters a flow event.
-- *The refresh race clients will hit:* a retried refresh after a lost response is a
-  replay and ends family and grant (A10′, inherited theft response plus bounded
-  lineage). Stated in the recipe as "sign in again", not hidden.
+- *Upgrade* (#65): forward-only migrations in one transaction, downgrade refused,
+  backup via SQLite's online backup, restore tested; key rotation = replace, restart,
+  every token dies — said plainly.
 
 **Tests.**
 
 | Kind | What |
 | --- | --- |
-| Atesaki fixtures (03 phase 3) | A4, A5, A6, A6a, A6b, A12, A13, A14 sweeper, A15; never 8 and never 9 as the matrices written in §12; every durable reason produced by at least one fixture; every G5 state reached |
+| Atesaki fixtures (03 phase 3) | A12, A13, A14 sweeper, A15; the machine first-issuance race; the migration and downgrade-refusal `boot` fixtures; every durable reason produced by at least one fixture; every G5 state reached |
 | Store conformance | the remaining rows on both adapters |
-| Race | the two-runner claim with a barrier at the CAS; the machine first-issuance race |
-| Crash | failpoints around A6 and A12 |
-| Real input | a real escalation with a real client: request → pending → `grants approve` → re-run → tool call → `grants revoke` → refresh refused, access dies at TTL; a machine client via `client_credentials` on a route with a deny rule |
-| Client matrix probe | how each client surfaces `approval_pending` + `request_id` (the user must be able to find the id) |
+| Crash | failpoints around A12; a crash mid-migration leaves the old schema intact |
+| Real input | a machine client via `client_credentials` on a route with a deny rule; a restore from backup on a real cluster; an upgrade from the previous tag |
 
 **Implement** (packet 07, rescoped):
 
 | PR | Content |
 | --- | --- |
-| `feat(grants): approvals A4, A5 and the claim A6, A6a, A6b` | with the authority contract from packet 12 |
-| `feat(cli): grants list, pending, approve, deny, revoke` | OS-user authentication, exact-id lookup, audit fields |
-| `feat(grants): machine clients A12, A13` | D10a–D10c, tombstones |
+| `feat(grants): machine clients A12, A13` (if kept) | D10a–D10c, tombstones |
 | `feat(grants): sweeper and retention A14, A15` | 60 s interval over every row kind (the lazy path exists since M4), idempotent purge |
-| `feat(audit): durable outbox fan-out` | best-effort JSONL, loss counter, both classes in one stream |
-| `test(e2e): escalation end to end` | the named real input |
+| `feat(store): migrations, backup, restore` | #65 |
+| `test(e2e): machine client and upgrade` | the named real input |
 
-**Gates.** Start: M4 done; 03 phase 3 locked; packet 12 landed. Done: parity line
-green on the whole portable set; every G6 row has a green fixture; `contract-v0-freeze`
-tag applied (#55).
+**Gates.** Start: M4 done; 03 phase 3 slice-locked; #67 and #65 ruled. Done: parity
+line green on the whole portable set; every G6 row has a green fixture;
+`contract-v0-freeze` tag applied (#55).
 
-**Decisions:** #24.
+**Decisions:** #67, #65.
 
 ### M6 — `rehearse`
 
-**You can now:** before deploying, run the whole flow on your laptop against a mock
-IdP for each client you care about — discovery → registration → authorize → callback →
-token → one `/mcp` call — per configured rung. It proves the gateway, the clients, and
-the config agree. It cannot prove the company's IdP registration; onboarding step 6
-does that.
+**You can now:** before deploying, run the whole protocol on your laptop against a
+mock IdP with recorded client profiles — discovery → registration → authorize →
+callback → token → one `/mcp` call — per configured rung. It is a **protocol and
+configuration self-test**: it proves the gateway and the config agree with what the
+named clients did when they were recorded. It does not run Codex or Claude Code and
+cannot prove a changed client version, a browser, or the company's IdP registration;
+live-client receipts with a tested version and date (M8) are the only compatibility
+proof, and onboarding's step 4 sentence is corrected to say so.
 
 **Security first.** The mock IdP and the rehearsal listener bind loopback only; the
 memory adapter is accepted here and only here; `rehearse` never contacts the real IdP
@@ -629,10 +701,14 @@ what to ask the IdP team, which secret keys the binary reads, where state lives,
 is lost on restart, and what the platform must enforce that the product cannot.
 
 **Security first.** Distroless static image, non-root uid, read-only root filesystem,
-a persistent volume (one supported type named, RWO) mounted over a path the image
-does not own, with `fsGroup` so the non-root process can create the store
-subdirectory (`0700`) on first boot — proven on first boot **and** restart on a real
-cluster; secrets and CIMD documents as `env:` from Secret keys (#56); CA bundles the
+a persistent volume mounted over a path the image does not own — `ReadWriteOncePod`
+on a named CSI storage class where available, else `ReadWriteOnce` — with
+`replicas: 1`, `strategy: Recreate` (a rolling update overlaps two pods on one
+store), and a startup lock so a second process refuses to start; `fsGroup` so the
+non-root process can create the store subdirectory (`0700`) on first boot — proven
+on first boot **and** restart on a real cluster; one ingress controller and version
+pinned (a generic `Ingress` guarantees neither framing nor timeouts nor path
+semantics); secrets and CIMD documents as `env:` from Secret keys (#56); CA bundles the
 same way; image pinned by digest; SBOM and provenance attestations on the release;
 NetworkPolicy egress derived from the documented ports; the ingress in
 `trustedProxies` (or every user shares one rate-limit bucket) and applying the same
@@ -686,6 +762,9 @@ through the published image following the recipe verbatim from a clean machine.
   labeled portable/host against `deltas.md` including the new scope-ceiling row
   (M4's input). One session a day on that lane through September is the cheapest
   schedule insurance there is.
+- **Packet 16 — the client compatibility spike** runs before any authorization-server
+  design is finalized and again before publish: what the real clients send and
+  accept is evidence, and evidence has already overturned one ruling (#62).
 - **STATE.md** is refreshed in the PR that changes a lane's state — never a separate
   chore.
 
@@ -730,6 +809,22 @@ without a proof is a finding.
 | 32 | A readiness probe that includes upstream reachability takes a multi-route gateway out of the balancer when one backend flaps (#61) | M3/M7 | `readyz` semantics fixed by contract; recipe probes only those |
 | 33 | Two `Host` fields are refused by Go before the handler; no audit line exists for them | M3 | fixture pins `400`; the negative matrix row cites the parser |
 | 34 | `alg` confusion: pinning means "must equal the configured one", not "ignore the header" | M3 | packet 14 wording; §7/§8 fixtures |
+| 35 | Real clients send no custom authorize parameters; `purpose` in the authorize URL is dead on arrival (#62) | M2/M4 | packet 16 evidence; consent-page carrier fixtures |
+| 36 | Purpose in a URL lands in browser history, ingress logs, referrers | M4 | POST carrier; fixture: purpose absent from every URL and flow line |
+| 37 | An empty group ceiling is `access_denied` (inherited), not `invalid_scope` | M4 | two-stage ceiling fixtures |
+| 38 | A required check that is *skipped* counts as passing on GitHub | M0 | `if: always()` plus explicit leg results; a failed leg proven unmergeable |
+| 39 | `ReadWriteOnce` allows several pods on one node; a rolling update runs two pods on one SQLite file | M7 | `Recreate`, `replicas: 1`, RWOP where available, startup lock |
+| 40 | `database/sql` opens more connections than one; pragmas are per connection | M4 | `SetMaxOpenConns(1)`; conformance suite under contention |
+| 41 | Go's `Shutdown` waits forever on an open SSE handler | M3 | stream contexts cancelled at drain; force-close after the bound (#61) |
+| 42 | No header-read or idle timeout by default; slowloris exhausts the process before any limit runs (#63) | M3 | real-socket exhaustion tests |
+| 43 | The module proxy's `.info` time is commit time, not publish time | M0 | no commit-age gate; Dependabot cooldown plus review |
+| 44 | A static credential header named `Host`, `Content-Length`, or `Transfer-Encoding` corrupts framing | M0/M3 | refusal case; forbidden-sibling table |
+| 45 | `MaxHeaderBytes` is enforced with a 4 KiB read allowance and includes the request line | M3 | threshold measured and pinned, not asserted |
+| 46 | Access tokens have no skew; B8's 60 s is for rung-4 assertions | M3 | strict `exp` fixture |
+| 47 | `.info`-style "any HTTP status" reachability is satisfied by a proxy block page (#59) | M3 | `--deep` reports transport path only |
+| 48 | The first upgrade has no migration or key-rotation story (#65) | M5/M7 | migration `boot` fixtures; recipe rotation section |
+| 49 | `checkHostPort` accepts `host:` (empty port); the URL sibling was fixed in PR 6 | M0 | refusal cases for both grammars |
+| 50 | Redirect-allowlist entries accept `http://` on non-loopback hosts (inherited §10 forbids) | M0 | refusal case; inherited §10 fixture |
 
 ## 6. Not in v0
 

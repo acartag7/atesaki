@@ -297,6 +297,11 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     and emit `scope_ceiling_applied`; (c) refuse. Arnold decides; the answer becomes a
     B-rule and a fixture. Claude Code's scope request was not observed (its authorize
     step needs the interactive `/mcp` menu).
+    **Roadmap note 2026-09-02:** an empty *group* ceiling is `access_denied` in the
+    inherited mcp-sso §17.4, not `invalid_scope`. **Proposal:** two stages — catalog
+    narrowing first (empty → `invalid_scope`, a new `deltas.md` row), then the
+    inherited group ceiling unchanged (empty → `access_denied`); the narrowed `scope`
+    returned in the token response; packet 16 confirms Codex accepts it.
 
 ## Added 2026-09-02 with the roadmap (`docs/roadmap.md` §2)
 
@@ -332,7 +337,10 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     arrive as `env:` from Secret keys, that `file:` is for hosts where the runtime
     user owns a `0600` regular file, and that the store path is a subdirectory
     Atesaki creates under the volume (mount roots fail the parent-directory rule).
-    No `[R]` default changes. Arnold decides.
+    **And** B2 gains the exception the merged code already embodies: the
+    configuration file itself is read once, may be a symlink (a ConfigMap mount is
+    one), carries the size cap, and has no ownership or mode rule — it is the
+    operator's input, not a secret. No `[R]` default changes. Arnold decides.
 57. **Rules cannot name a client whose id is per-install.** G7's `clientIn` matches
     exact client ids; Codex's CIMD client id is a per-install URL (#5 evidence), so a
     route rule "auto-approve read scopes for Codex" cannot be written once.
@@ -346,16 +354,17 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     is bounded (an attacker sending random `kid`s must not drive outbound calls).
     **Proposal:** at most one on-demand refetch per key set per 60 s; a `kid` still
     unknown after it refuses; the schedule is unchanged. A number, so it lands in B8
-    with the owner's "ok". Recorded as a gap for packet 14; the implementer must not
-    invent it.
+    with the owner's "ok" — a ruling, not a gap. Arnold decides.
 59. **`validate --deep` and the upstream "real read".** `contract.md §9` says the
     verb probes each upstream with real reads and never a state-changing call, but not
     what it sends to an MCP upstream. A `GET` on a Streamable HTTP endpoint may open a
     stream; a `POST` is a JSON-RPC call. **Proposal:** a `GET` to the upstream URL
     through the route's egress profile with no credential, no session, and
     `Accept: application/json`, closed after the status line; any HTTP status proves
-    reachability (401/403 included); a TLS or proxy failure names the hop. Recorded as
-    a gap for packet 14; the implementer must not invent it.
+    reachability (401/403 included); a TLS or proxy failure names the hop. The verb
+    reports this as "transport path reachable", never "the backend works" — a proxy
+    block page or a wrong virtual host answers a status line too; backend semantics
+    are proven by `rehearse` and the live proof. Arnold decides.
 60. **Limiter outage and the missing budgets.** The reference limiter fails **open**
     when it throws on authorize, approve, token, and revoke, fail-closed only for
     stored registration (mcp-sso §09); Atesaki inherits that by silence. B8 names
@@ -368,8 +377,78 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     shutdown, but no sentence says what `readyz` checks or what `SIGTERM` does. A
     probe that includes upstream reachability takes a multi-route gateway out of the
     load balancer whenever one backend flaps (the seed recipe did this). **Proposal:**
-    `livez` = the process serves; `readyz` = store open, signing key loaded, and
-    (from slice 2) the identity JWKS fetched at least once — never upstream
-    reachability, which is `validate --deep`'s job; `SIGTERM` stops accepting,
-    drains non-stream requests for a bounded time (a B8 number), ends streams, then
-    exits. Owned by slice 1 once ruled. Arnold decides.
+    `livez` = the process serves; `readyz` per identity mode and shipped capability
+    — slice 1: store directory and audit sink open, signing key loaded; slice 2 adds
+    "identity JWKS fetched at boot" only for modes that fetch one (console and a
+    static `jwksRef` never do) — never upstream reachability, which is `validate
+    --deep`'s job; `SIGTERM` stops accepting, drains non-stream requests for a
+    bounded time (a B8 number), cancels every stream's context, and force-closes
+    after the bound (Go's `Shutdown` alone waits forever on an open stream). Owned
+    by slice 1 once ruled. Arnold decides.
+
+## Added 2026-09-02 after the roadmap's second review round
+
+62. **Real clients cannot send `purpose` and `requested_duration`.** The 2026-09-01
+    probe recorded three Codex CLI 0.151.0 authorize requests
+    (`evidence/prm-probe-2026-09-01/probe.log`); none carries either parameter, and
+    neither Codex nor Claude Code exposes a way to add arbitrary authorize
+    parameters — the MCP client flow is plain OAuth. Under G4 as ruled (#35a) the
+    absent parameters are `invalid_request`, so never 8 refuses the product's
+    principal clients on day one. **Proposal (reverses #35a with evidence):** the
+    consent page is the carrier — two fields, purpose and duration (defaulting to
+    the route maximum), POSTed with the signed consent; the policy step (G-c) runs at
+    approve time on the submitted values; a re-run after approval shows the approved
+    values and asks only approve or deny; the authorize-parameter carrier is dropped.
+    Consequences: G4/G6 (A1–A3 evaluate policy at approve time; D5 rewritten), D3
+    (the consent token no longer carries purpose and duration; the approve POST does,
+    bound by the JTI), B7 (malformed purpose or duration refused on the approve
+    channel), the threat model (purpose never travels in a URL, so it never reaches
+    browser history, ingress logs, or referrers), and hostile-purpose fixtures (HTML,
+    Unicode, control characters, size) under the inherited page controls (HTML
+    escaping, CSP, `nosniff`, `Cache-Control: no-store`, referrer policy) cited by
+    clause. Packet 16 confirms the clients complete a consent page with two extra
+    fields. Arnold decides.
+63. **No pre-handler exhaustion envelope.** B5 bounds bytes and counts and B8 bounds
+    authenticated streams, but nothing bounds *time* before identity: no header-read
+    timeout, body-read deadline, idle timeout, TLS handshake timeout, listener
+    connection cap, or unauthenticated per-IP budget on `/mcp`. Slow headers, slow
+    bodies, or anonymous connection churn exhaust the process before any route,
+    identity, or subject limit runs. **Proposal:** B8 rows for each (numbers to be
+    "ok"ed), enforced in slice 1 and proven with real-socket slow-header and
+    slow-body tests. Arnold decides.
+64. **Durable events are not guaranteed to reach the JSONL stream.** G12 says loss is
+    possible only for flow events, but the JSONL fan-out of `grant_event` rows has no
+    cursor or retry, so a durable event can be missing from the advertised combined
+    stream after a sink failure or a crash. **Proposal:** the store is the durable
+    audit of record; the JSONL projector keeps a persisted cursor over
+    `grant_event.seq`, resumes on restart, and so delivers durable events at least
+    once (duplicates possible, deduplicated by `event_id`); flow events stay lossy
+    and counted. G12 says exactly that. One cursor, no dispatcher framework. Arnold
+    decides.
+65. **The first upgrade has no design.** No store schema version, migration,
+    backup, restore, or downgrade refusal exists, and B1 has one signing key with no
+    rotation story beyond "store loss ⇒ rotation ⇒ all tokens die". **Proposal:** a
+    schema-version row; forward-only migrations inside one transaction; downgrade
+    refused at open; SQLite online backup as the recipe's backup command with a
+    tested restore; key rotation in v0 is hard and honest — replace the key, restart,
+    every token dies; no key ring, no overlap window in v0 (that is future work with
+    key ids). §14's "upgrade behavior" points at it. Arnold decides.
+66. **Hash bytes, A6b atomicity, A9′ error mapping.** `purpose_hex` has no byte,
+    trim, or case rule; `approved_hash` names no exact member set; A6b does not say
+    whether the invalidation and the following A3/A2 are one transaction or two;
+    A9′ lists `invalid_grant` and `invalid_target` without mapping each predicate.
+    **Proposal:** G3 gains one byte-exact test vector (purpose = the UTF-8 bytes
+    after the B5 trim, lowercase hex; the approved object = `{subject, client_id,
+    resource, scopes (approved, sorted, deduplicated), duration_s (approved),
+    purpose_hex}` under `atesaki-grant-approved-v1\n`); A6b is one transaction (the
+    invalidation and the new request commit together, or nothing does); A9′: wrong
+    `resource` → `invalid_target` without consumption, every other failure →
+    `invalid_grant` with consumption — with a `deltas.md` row if the inherited
+    mapping differs. Arnold decides.
+67. **What stays in v0.** The second review round's judgment: with one person
+    merging and December the target, defer **machine clients** (G10, A12, A13,
+    D10a–D10c, tombstones) to v0.1 — a separate capability whose removal touches
+    nothing in the human loop — and keep **rung 4** (signed proxy assertions),
+    because "no IdP change at all" is the positioning sentence. Reverses the
+    2026-08-31 machine-clients ruling if taken. The roadmap marks machine clients as
+    "M5 if kept". Arnold decides.
