@@ -108,7 +108,7 @@ Serial inside the Atesaki lane. The two dashed inputs from mcp-sso are the only 
 
 ### M0: Repo hardening
 
-**You can now.** Uevery PR runs the suite before you see it; `main` cannot be force-pushed or merged red; a stranger can report a vulnerability; the tree says what it is licensed under.
+**You can now.** Every PR runs the suite before you see it; `main` cannot be force-pushed or merged red; a stranger can report a vulnerability; the tree says what it is licensed under.
 
 **Security first.** This is the milestone that makes the later ones checkable. Go has no package-manager-level release-age gate and the module proxy's `.info` time is the **commit** time, not a publish time (a freshly tagged old commit would pass any age test), so there is no honest second layer to build: the cooldown is Dependabot `cooldown` (15 days, majors 30, item 20) plus GitHub's dependency-review check on every PR that touches `go.mod`, plus the PR template asking for the version's publish date and age as human evidence. `go.sum` is the integrity ledger, not a lockfile, `go.mod` plus minimal version selection is what pins the build list, verified with `go list -m all`. `govulncheck` runs in CI from a pinned version. Builds use `-mod=readonly`. Race detector on. Linux and macOS in the matrix (the B2 rules use `syscall.Stat_t` and `O_NOFOLLOW`; Windows is out of v0 and the README says so). Actions pinned by commit; the fixture corpus is supply-chain input from here on (its hashes are verified before anything is materialized, M3). Two grammar defects found in review are fixed here, with their mirrors: `checkHostPort` accepts a present but empty port (`gw.example.com:`), the unmirrored sibling of PR 6's URL-port fix, and the redirect-allowlist grammar accepts `http://` on any host where the inherited §10 allows it only on loopback; a static credential header name may be a transport or hop-by-hop field (`Host`, `Content-Length`, `Transfer-Encoding`, `Connection`) and must be refused, the sentence lands in packet 14 first, the code after.
 
@@ -135,7 +135,7 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 
 ### M1: Config boundary (done) + residuals
 
-**You can now.** Uwrite `atesaki.yaml`, run `atesaki validate`, and be refused by the exact resource, field, and rule for 71 malformed shapes; `atesaki routes` prints the ingress path list. (PR 5, PR 6.)
+**You can now.** Write `atesaki.yaml`, run `atesaki validate`, and be refused by the exact resource, field, and rule for 71 malformed shapes; `atesaki routes` prints the ingress path list. (PR 5, PR 6.)
 
 **Security first.** Done: strict YAML (no anchors, aliases, tags, duplicate keys), unknown-is-refusal, references only, the B2 file invariants on `file:` refs, B3 grammars, B4 shape, B5 config caps, the G7 boot contradiction check. Residual: the six "interpretations to confirm" in PR 5's description are enforced by code but written nowhere in the contract, each becomes a B1 sentence or is reversed.
 
@@ -156,7 +156,7 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 
 ### M2: Contract closure before any authorization-server code
 
-**You can now.** Unothing new runs. Every rule the AS and grants slices will implement exists as a sentence, and every sentence that a wrong build could violate has a fixture id or is listed as uncovered by name.
+**You can now.** Nothing new runs. Every rule the AS and grants slices will implement exists as a sentence, and every sentence that a wrong build could violate has a fixture id or is listed as uncovered by name.
 
 **Security first.** This is where the OWASP pass happens on paper: injection (scope names, purpose, subject bytes, JSON encoding of audit fields), broken auth (assertion verification, client authentication, pairing code), authorization (audience wall, ceiling, approve-then-swap via hash binding), sensitive exposure (secrets by reference, non-oracular errors), misconfiguration (unknown-is-refusal, empty allowlists), SSRF (upstream from config only; CIMD/JWKS through egress profiles with address-range refusal), path traversal (B3 single decode, separator scan), deserialization (strict YAML, bounded JSON), TOCTOU (CAS inside the transaction), open redirects (exact allowlist), tenant isolation (per-route audience), crypto misuse (alg pinned per key, `kid` exact), log injection (allowlisted fields, JSON-encoded lines), CSRF on consent (origin check, signed consent token), ReDoS (RE2 only, and only in fixtures), timing (digest comparison in constant time), proxy trust (B6), cache poisoning (no `cache-control` relay, metadata from config), caps on every input (B5), enforcement- plane outage (decider, store, JWKS, and the limiter, #60), and the **build and fixture supply chain**: a hostile fixture revision is a file-write primitive unless the runner contains it; modules, actions, tools, and base images are pinned; attestations bind the reviewed inputs. The threat model also records the residual that a group removed after activation does not revoke the grant, refresh rechecks nothing until expiry or revocation; the levers are a shorter `maxDuration` and `grants revoke`.
 
@@ -177,7 +177,7 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 
 ### M3: Slice 1: runner, relay, verifier, `validate --deep`
 
-**You can now.** Urun `atesaki serve` in front of a real MCP server that today needs a shared key. The key lives in the container. A request without a token gets the route's own challenge; a token for another route is refused with that route's challenge; a good token reaches the tool. `validate --deep` proves the IdP metadata, each upstream, the store path, and the signing key are reachable through the configured egress before anything is deployed. `readyz` answers only when the store directory is admissible, the audit sink is open, and the key is loaded (no database exists yet); `SIGTERM` drains (#61). There is no login yet: the demo token is minted by the end-to-end test with the test signing key, there is no `mint` verb in v0 (§9's verb list is closed; a bounded mint would be a contract change).
+**You can now.** Run `atesaki serve` in front of a real MCP server that today needs a shared key. The key lives in the container. A request without a token gets the route's own challenge; a token for another route is refused with that route's challenge; a good token reaches the tool. `validate --deep` proves the IdP metadata, each upstream, the store path, and the signing key are reachable through the configured egress before anything is deployed. `readyz` answers only when the store directory is admissible, the audit sink is open, and the key is loaded (no database exists yet); `SIGTERM` drains (#61). There is no login yet: the demo token is minted by the end-to-end test with the test signing key, there is no `mint` verb in v0 (§9's verb list is closed; a bounded mint would be a contract change).
 
 **Security first.**
 
@@ -222,7 +222,7 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 
 ### M4: Slice 2: sign-in, the store, the human loop, `idp-request`
 
-**You can now.** Upoint Claude Code or Codex at `https://host/route/mcp`. It discovers the route, registers (CIMD or DCR), the user signs in with the company login (Entra, generic OIDC, a signed proxy assertion, or the loopback console), states a purpose and a duration on the consent page, and, where a route rule says `allow`, the agent gets tokens and calls a tool. Where nothing allows it, the flow ends with `approval_pending` and a request id; `atesaki grants pending` shows it, `grants approve <id>` narrows and approves, the user runs the flow again, sees the approved values, approves, and the tool call works. `grants deny`, `grants revoke`, and RFC 7009 end access within one access TTL. `atesaki idp-request` prints the ticket for the IdP team. This is the product promise for people; machines come next.
+**You can now.** Point Claude Code or Codex at `https://host/route/mcp`. It discovers the route, registers (CIMD or DCR), the user signs in with the company login (Entra, generic OIDC, a signed proxy assertion, or the loopback console), states a purpose and a duration on the consent page, and, where a route rule says `allow`, the agent gets tokens and calls a tool. Where nothing allows it, the flow ends with `approval_pending` and a request id; `atesaki grants pending` shows it, `grants approve <id>` narrows and approves, the user runs the flow again, sees the approved values, approves, and the tool call works. `grants deny`, `grants revoke`, and RFC 7009 end access within one access TTL. `atesaki idp-request` prints the ticket for the IdP team. This is the product promise for people; machines come next.
 
 *Why this shape:* under the default policy everything escalates, so a slice without approvals ends every default flow in a dead end and proves nothing about the loop onboarding sells. The store, the two-phase discipline (G8), the conformance suite, and the whole interactive operation table land here on rows with humans in them; M5 adds the rows with machines and clocks in them.
 
@@ -285,7 +285,7 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 
 ### M5: Slice 3: machines, clocks, and the upgrade path
 
-**You can now.** Uunattended agents, if #67 keeps them in v0, are declared as machine clients and get bounded, revocable, tombstone-guarded tokens; expiry fires on time without waiting for a request; terminal rows purge; the store has a schema version, a migration path, a backup command, and a documented hard key rotation.
+**You can now.** Unattended agents, if #67 keeps them in v0, are declared as machine clients and get bounded, revocable, tombstone-guarded tokens; expiry fires on time without waiting for a request; terminal rows purge; the store has a schema version, a migration path, a backup command, and a documented hard key rotation.
 
 **Security first.**
 
@@ -317,7 +317,7 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 
 ### M6: `rehearse`
 
-**You can now.** Ubefore deploying, run the whole protocol on your laptop against a mock IdP with recorded client profiles, discovery → registration → authorize → callback → token → one `/mcp` call, per configured rung. It is a **protocol and configuration self-test**: it proves the gateway and the config agree with what the named clients did when they were recorded. It does not run Codex or Claude Code and cannot prove a changed client version, a browser, or the company's IdP registration; live-client receipts with a tested version and date (M8) are the only compatibility proof, and onboarding's step 4 sentence is corrected to say so.
+**You can now.** Before deploying, run the whole protocol on your laptop against a mock IdP with recorded client profiles, discovery → registration → authorize → callback → token → one `/mcp` call, per configured rung. It is a **protocol and configuration self-test**: it proves the gateway and the config agree with what the named clients did when they were recorded. It does not run Codex or Claude Code and cannot prove a changed client version, a browser, or the company's IdP registration; live-client receipts with a tested version and date (M8) are the only compatibility proof, and onboarding's step 4 sentence is corrected to say so.
 
 **Security first.** The mock IdP and the rehearsal listener bind loopback only; the memory adapter is accepted here and only here; `rehearse` never contacts the real IdP or a real upstream (recorded exchanges only, the runner's egress port); client profiles are recorded flows in the fixture profile, not live clients; output names the profile, the rung, and the step that failed, never a secret.
 
@@ -329,7 +329,7 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 
 ### M7: Deployment kit and recipe
 
-**You can now.** Udeploy one container with one kustomize example; the ingress path list comes from `atesaki routes`; the recipe tells you, per identity mode, exactly what to ask the IdP team, which secret keys the binary reads, where state lives, what is lost on restart, and what the platform must enforce that the product cannot.
+**You can now.** Deploy one container with one kustomize example; the ingress path list comes from `atesaki routes`; the recipe tells you, per identity mode, exactly what to ask the IdP team, which secret keys the binary reads, where state lives, what is lost on restart, and what the platform must enforce that the product cannot.
 
 **Security first.** Distroless static image, non-root uid, read-only root filesystem, a persistent volume mounted over a path the image does not own, `ReadWriteOncePod` on a named CSI storage class where available, else `ReadWriteOnce`, with `replicas: 1`, `strategy: Recreate` (a rolling update overlaps two pods on one store), and the server-instance lock from M4 so a second `serve` refuses to start while the CLI and backup still work; `fsGroup` so the non-root process can create the store subdirectory (`0700`) on first boot, proven on first boot **and** restart on a real cluster; one ingress controller and version pinned (a generic `Ingress` guarantees neither framing nor timeouts nor path semantics); secrets and CIMD documents as `env:` from Secret keys (#56); CA bundles the same way; image pinned by digest; SBOM and provenance attestations on the release; NetworkPolicy egress derived from the documented ports; the ingress in `trustedProxies` (or every user shares one rate-limit bucket) and applying the same request-framing rule as Go's parser; **no path rewrite at the ingress** (audiences are byte-exact); `livez`/`readyz` as ruled in #61; audit rotation that preserves every line already written (reopen, never truncate) while flow-event loss stays the accepted, counted residual it is (G12); backend reachability stated as the obligation it is (§14).
 
@@ -343,7 +343,7 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 
 ### M8: Publish
 
-**You can now.** Ua stranger reads the README, follows the ten-minute path, and gets a real sign-in; the trust artifacts (contract set, deltas, decisions ledger, fixtures, threat model, negative matrix, parity line) are one click away; the name is checked and recorded; the tree contains nothing employer-internal.
+**You can now.** A stranger reads the README, follows the ten-minute path, and gets a real sign-in; the trust artifacts (contract set, deltas, decisions ledger, fixtures, threat model, negative matrix, parity line) are one click away; the name is checked and recorded; the tree contains nothing employer-internal.
 
 **Security first.** Sanitization is provable: a grep for hostnames, tenant ids, group names, vault paths, employer names, and the private evidence folder runs in CI from here on. Release artifacts carry checksums and attestations. `SECURITY.md` names the channel and the response window. Every "never/always/cannot" in public copy traces to a fixture or a receipt.
 
