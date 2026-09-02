@@ -9,10 +9,17 @@ owner-decision comments on PR #338 (the latest, "§19 simplification", supersede
 anchor and fenced-block ones) · §05, §07, §08, §09, §10, §11 ·
 docs/verification-design.md · ~/project/atesaki-core/docs/deltas.md (the consumer's
 declared divergences — label, never pin against, D1/D2/D3/D4/D5/D6/D7/D11/D12/D13).
-STALE-STATE NOTE (2026-09-02): #338 is MERGED at 09fb858. Draft PR #340 is
-SUPERSEDED — the runner landed on `main` as serial PRs (#374–#392 merged 2026-09-01;
-#388 and #391 open). Phases A–C are largely on `main`; verify each against `main`
-before redoing anything, then continue with D and E. What Atesaki needs, in order
+STALE-STATE NOTE (2026-09-02, evening): #338 is MERGED at 09fb858. PR #340 is
+CLOSED — the runner landed on `main` as serial PRs (#374–#400; `main` at 63ed987
+"run the parity runner in CI"). Phases A–C are DONE on `main`: `pnpm test:parity`
+runs in CI and passes the two draft 8.4 fixtures through Fastify, Express, and Hono
+with zero skips (verified locally 2026-09-02). Phase D is NOT done: both 8.4
+fixtures are still `draft`, no receipt exists, and there is no `MANIFEST.json`,
+`CATALOGUE.md`, or hash-gate script — §19.9 requires the hash gate to exist before
+the first freeze. Start at D. Side finding for mcp-sso: three live-run script tests
+(`live-evidence-scripts`, `live-run-script`, the symlinked live-state cases) fail on
+macOS with any temp dir and pass in Linux CI — a portability defect in the live
+run-support scripts, unrelated to parity. What Atesaki needs, in order
 (docs/roadmap.md §4): (1) the runner passes the portable 8.4 draft and it freezes
 with a receipt; (2) `MANIFEST.json` + `CATALOGUE.md` + the CI hash gate; (3) the §08
 verifier slice frozen — M3's cross-lane input; (4) §07/§09/§10/§11 fixtures labeled

@@ -810,13 +810,16 @@ through the published image following the recipe verbatim from a clean machine.
   fresh context, "report everything with confidence", fail-closed sweep, sibling
   sweep, test-diff suspicion, invented-API grep, concurrency and partial failure for
   any G6 row touched. A PR is done when the review re-runs clean.
-- **Packet 10 — the mcp-sso lane.** The runner is on `main` as serial PRs (fifteen of
-  374–392 merged, two open); PR 340 is history. What Atesaki needs, in order: (1) the runner passes the portable 8.4 draft
-  and it freezes with a receipt; (2) `MANIFEST.json` + `CATALOGUE.md` + the CI hash
-  gate; (3) the §08 verifier slice frozen (M3's input); (4) §07/§09/§10/§11 fixtures
-  labeled portable/host against `deltas.md` including the new scope-ceiling row
-  (M4's input). One session a day on that lane through September is the cheapest
-  schedule insurance there is.
+- **Packet 10 — the mcp-sso lane.** The runner is done and in CI (`main` `63ed987`;
+  4/4 on the two draft 8.4 fixtures across Fastify, Express, and Hono, zero skips,
+  verified locally 2026-09-02); PR 340 is closed. What Atesaki still needs, in
+  order: (1) the 8.4 fixtures **frozen with receipts** — the runner passes them, the
+  freeze itself has not been recorded; (2) `MANIFEST.json` + `CATALOGUE.md` + the CI
+  hash gate, none of which exist yet (§19.9 requires the hash gate before the first
+  freeze); (3) the §08 verifier slice written and frozen (M3's input — today the
+  corpus is two fixtures); (4) §07/§09/§10/§11 fixtures labeled portable/host
+  against `deltas.md` including the new scope-ceiling row (M4's input). One session
+  a day on that lane through September is the cheapest schedule insurance there is.
 - **Packet 16 — the client compatibility spike** runs before any authorization-server
   design is finalized and again before publish: what the real clients send and
   accept is evidence, and evidence has already overturned one ruling (#62).
