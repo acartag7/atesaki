@@ -54,7 +54,7 @@ server:
 egress:
   profiles:
     - name: corp-proxy
-      proxyUrl: http://outappl.example.com:3128
+      proxyUrl: http://proxy.example.com:3128
     - name: direct
       proxyUrl: none            # on-prem upstreams are reached directly
 
@@ -102,12 +102,12 @@ routes:
     resource: https://gw.example.com/splunk/mcp
 
     upstream:
-      url: https://vspl42.example.com:8089/services/mcp   # host+path are trusted
+      url: https://splunk.example.com:8089/services/mcp   # host+path are trusted
                                            # config only; the inbound request never
                                            # chooses the upstream (SSRF guard).
       egress: direct
       tls:
-        caBundleRef: file:/etc/atesaki/ca/post-device-ca.pem   # internal CA,
+        caBundleRef: file:/etc/atesaki/ca/internal-ca.pem   # internal CA,
                                            # scoped to THIS upstream — not a global
                                            # NODE_EXTRA_CA_CERTS that widens trust.
         # insecureSkipVerify: false        # dev only; log a loud warning if true
