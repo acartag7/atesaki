@@ -102,7 +102,7 @@ Ids are generated in preflight; consent, access, and refresh tokens are signed i
 
 ## G9. Expiry propagation `[O:2026-08-31 activation start]`
 
-Access `exp = min(now + accessTTL, grant_expires_at)`; refresh-family expiry ≤ `grant_expires_at`; successors copy from the `grant` row; access tokens carry `grant_id` (D4). Before activation the only bound is the code TTL, so never 8's exchange-time boundary is "code TTL elapsed or grant revoked"; `grant_expires_at` bounds rotation (A10″) and relay verification (E2).
+Access `exp = min(now + accessTTL, grant_expires_at)`; refresh-family expiry ≤ `grant_expires_at`; successors copy from the `grant` row; access tokens carry `grant_id` (D4). Before activation the only bound is the code TTL, so the exchange-time boundary of never 8 (`contract.md §12`) is "code TTL elapsed or grant revoked"; `grant_expires_at` bounds rotation (A10″) and relay verification (E2).
 
 ## G10. Machine grants `[O:2026-08-31]`
 
