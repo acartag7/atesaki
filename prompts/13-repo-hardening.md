@@ -23,9 +23,16 @@ PR 1 — `ci: build, vet, gofmt, race tests, govulncheck, contract lint`
 - Prove the gate bites twice: a failing test makes `ci` red (link the run), and
   after protection is on, a PR with a deliberately failed leg cannot be merged
   (screenshot or API output in the PR); then drop the commit and link the green run.
-- After merge (owner runs, commands in the PR body): branch protection on `main` —
-  required status check `ci`, no force-push, no deletion, linear history, require the
-  branch to be up to date. Record the exact `gh api` call.
+- After merge (owner runs, commands in the PR body): protection on `main` as a
+  **ruleset** — required status check `ci`, no force-push, no deletion, linear
+  history, require the branch to be up to date, and **bypass disabled for
+  administrators** (GitHub lets admins bypass classic protection by default; the
+  sole merging owner must not be able to merge red). Record the exact `gh api` call.
+- Sanitization grep as a CI step from this PR on: hostnames, tenant ids, AD group
+  names, vault paths, employer names, and references to the private evidence folder
+  outside `docs/` evidence notes — packet 09's categories, run before every public
+  push from now on (every PR before M8 is already public; M8 re-runs this, it does
+  not introduce it).
 
 PR 2 — `chore: license, security policy, gitignore`
 - `LICENSE`: the owner's choice (`[decide]`). mcp-sso ships MIT; Apache-2.0 adds an
@@ -70,18 +77,20 @@ PR 5 — `refactor(config): one reserved-path source`
   list. Expose it once from `config` and use it in both. A test asserts the `routes`
   output's `reserved` equals what collision checking used.
 
-PR 6 — `fix(config): empty port, redirect scheme, credential header names`
+PR 6 — `fix(config): empty port; http redirects off loopback`
 - `checkHostPort` accepts a present but empty port (`gw.example.com:`, `[::1]:`) —
   the unmirrored sibling of PR 6's `checkURL` fix; refuse it, with cases for a DNS
   name, IPv4, and bracketed IPv6.
 - `checkOriginOrURL` (redirect allowlist entries) accepts `http://` on any host; the
-  inherited mcp-sso §10 allows `http` only on loopback. Implement the inherited
-  redirect-entry grammar once and apply it to configured entries; cases for an
-  origin, an exact URL, loopback IPv4, loopback IPv6, and a non-loopback `http`.
-- `upstream.credential.header` accepts any token-shaped name, including `Host`,
-  `Content-Length`, `Transfer-Encoding`, `Connection`, `Trailer`, `Upgrade`, and
-  `TE`; refuse transport, framing, and hop-by-hop names (the B1 sentence lands in
-  packet 14 item 5; write the refusal here with one case per forbidden name).
+  inherited mcp-sso §10 allows `http` only on loopback — refuse non-loopback `http`
+  now (cases: an origin, an exact URL, loopback IPv4, loopback IPv6, a non-loopback
+  `http`). The **full** inherited §10 entry grammar (delimiter and control checks,
+  canonical spelling, root-slash and percent-triplet rules, length bounds) is slice
+  2's first PR with its `inherited` fixtures — not this one.
+- The credential header-name refusal (`Host`, `Content-Length`, `Transfer-Encoding`,
+  `Connection`, `Trailer`, `Upgrade`, `TE`, `Keep-Alive`, `Proxy-*`) is written
+  **after** packet 14 item 5 lands the B1 sentence — contract before code — as its
+  own small PR, one case per forbidden name.
 - Every case under `testdata/refuse/` with `# expect:` naming the rule; the mirror
   sweep listed in the PR.
 
@@ -111,10 +120,10 @@ docs/contract*.md; every PR verified by running (`go test -race ./...`, the work
 itself). Windows is out of v0 (B2 uses `O_NOFOLLOW` and `Stat_t`); README says
 "Linux and macOS" in PR 2.
 
-DONE WHEN: CI is a required check on main; a red PR cannot merge (proven); Dependabot
-cooldown and dependency review in place; the three config fixes merged with
-regression tests and their mirrors; the name check reported; STATE and ledger
-current.
+DONE WHEN: CI is a required check on main; a red PR cannot be merged by the owner's
+own account (proven); the sanitization grep runs in CI; Dependabot cooldown and
+dependency review in place; the two config fixes merged with regression tests and
+their mirrors; the name check reported; STATE and ledger current.
 
 REPORT: the red-then-green run links; the `gh api` protection call; the license
 chosen and why; anything the workflow could not run on macOS.

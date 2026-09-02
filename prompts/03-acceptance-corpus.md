@@ -3,7 +3,7 @@ FALLBACK: grok-4.5
 MILESTONES: M2 (phases 0–1), M4 (phase 2), M5 (phase 3) — docs/roadmap.md.
 WHY: the tests a WRONG build fails. Atesaki's own fixture corpus, in the shared §19
 format, for everything mcp-sso's corpus does not cover. Fixtures for a slice are
-written and **slice-locked** before that slice's code (per-slice freeze, #55): their
+written and **slice-locked** before that slice's code (the slice lock, #55): their
 §19 status stays `draft` until the runner passes them; the lock is an owner-approved
 `fixtures/LOCK-<slice>.json` listing fixture hashes and the pinned contract SHAs;
 `frozen` needs a passing-runner receipt. They run red until the Go exists.
@@ -106,7 +106,10 @@ PHASE 2 — SLICE-2 FIXTURES (M4, the whole human loop): §4 rungs (each rung's 
 refusals and acceptance; rung 4: duplicate assertion header, unsigned header, wrong
 `kid`, stale JWKS beyond the interval, identity headers stripped on non-identity
 paths, bounded refetch #58); never 6 (dedicated rung whose IdP rejects the redirect:
-the IdP error surfaces, no fallback); the consent-page carrier (#62): purpose and
+the IdP error surfaces, no fallback); the slice-2 configuration fields (`boot`
+fixtures the old parser must fail: `clients.cimd.liveFetch`, `clientOriginIn`, the
+approver objects, `knownCimd` references, forbidden credential header names, the
+inherited §10 redirect-entry grammar); the consent-page carrier (#62): purpose and
 duration POSTed with the consent, absent from every URL and flow line, hostile
 purpose (HTML, Unicode, control characters, over cap) refused or escaped per the
 inherited page controls, policy evaluated on the submitted values; the two-stage
@@ -118,9 +121,12 @@ outage delta (#60); D1, D3, D4, D5's allow branch, D6, D7, D11, D12, D13; operat
 rows A1, A2, A3 (insert), A3′, A3″, A7, A8, A9, A9′ (consumed on binding failure, not
 on wrong `resource`), A10, A10′ (replay revokes grant and family), A10″, A11 via RFC
 7009, A4, A5, A6, A6a (two-runner barrier as a `suite` receipt), A6b (one
-transaction, #66), the packet-12 authority fixtures by their stated intent
-(unauthorized OS user refused per verb; self-approval refused where checkable;
-`claimed_approver` never authority), A14's lazy transitions inside A3's cap/dedupe
+transaction, #66), the packet-12 authority rules as **suite receipts** with an
+injected effective-identity port (the profile has no command carrier: unauthorized
+uid refused per verb; self-approval refused where checkable; `claimed_approver`
+never authority), the #62 state machine (C1 `entry` POST → deny / allow / escalate
+/ claim; C2 `confirm` POST → A7/A8; a C1 replay refused; a C2 presented at the
+entry stage refused), A14's lazy transitions inside A3's cap/dedupe
 read and inside A6/A9/A10, E1–E3; the projector cursor (#64: a durable event reaches
 JSONL after a sink failure and a restart); never 8 and never 9 as the matrices
 written in §12 (purpose shape × duration shape × boundaries × caps × races; three
@@ -143,7 +149,7 @@ every id-taking action; exact refusal, never "any 4xx"; never catch the fixture'
 failure; fresh sentinel subjects per fixture; garbage is refusal, never a save. A
 fixture and a fail-closed rule in conflict → the rule wins; record why.
 
-HARD RULES: one self-explanatory fixture behavior per PR; contract pages unchanged
+HARD RULES: one invariant or protocol chain per PR with all its fixtures; contract pages unchanged
 unless the owner accepts a proposal under `prompts/README.md`; no Go except the
 schema/manifest tooling if it is Go; nothing may depend on the machine running it;
 every fixture PR updates the rows it satisfies in `docs/negative-matrix.md` (packet 04).

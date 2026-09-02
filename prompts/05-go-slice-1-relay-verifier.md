@@ -1,13 +1,14 @@
 MODEL: grok-4.5   EFFORT: high   FALLBACK: gpt-5.6-terra   TOOL: Codex CLI or pi, in a fresh clone of ~/project/atesaki-core
-MILESTONE: M3 (docs/roadmap.md). PRECONDITION (per-slice freeze, #55): the sections
+MILESTONE: M3 (docs/roadmap.md). PRECONDITION (the slice lock, #55): the sections
 below are SHA-pinned in this packet's header by the owner; packet 03 phase 1 fixtures
 slice-locked (`fixtures/LOCK-slice-1.json`; §19 status `draft` until this runner
 passes them); **mcp-sso's §8 verifier fixtures frozen with receipts** — the one
 cross-lane input: this slice's verifier is inherited §07/§08 behavior, proven against
 the shared corpus, never re-authored here.
 PINNED: contract.md @ <sha> · contract-boundaries.md @ <sha> · contract-grants.md @
-<sha> (G1 `resource`, G9, G12 only) · deltas.md @ <sha> · fixtures/MANIFEST.json @
-<sha> · mcp-sso corpus <version> @ <sha>.
+<sha> (G1 `resource`, G9, G12 only) · deltas.md @ <sha> · fixtures/LOCK-slice-1.json
+@ <sha> · mcp-sso corpus <version> @ <sha> + its MANIFEST.json hash. BLOCKING
+RULINGS: #55, #59, #61, #63 (with values), and the JOSE library choice.
 WHY: the first things that run — the Atesaki fixture RUNNER, then relay + verifier +
 `validate --deep`, proven against it. Beyond the frozen §8 set it depends on NO
 mcp-sso fixture — the fastest path to a binary you can point at a real MCP.
@@ -20,9 +21,10 @@ docs/negative-matrix.md rows tagged slice 1 · docs/roadmap.md §M3 (the pipelin
 order, the gotcha register rows 11–19, 24, 28) · prompts/README.md conventions ·
 docs/open-questions.md #59 as ruled.
 
-SCOPE — serial PRs, one behavior each, in this order (merge before the next):
-1. `feat(runner): load and validate Atesaki fixtures` — verifies `MANIFEST.json`
-   hashes before touching the disk; loads a fixture in the Atesaki profile; validates
+SCOPE — serial PRs, one invariant or protocol chain each, in this order (merge before the next):
+1. `feat(runner): load and validate Atesaki fixtures` — verifies
+   `fixtures/LOCK-<slice>.json` before running any slice-locked draft and
+   `MANIFEST.json` for frozen fixtures, both before touching the disk; loads a fixture in the Atesaki profile; validates
    `given.config` with the real parser; materializes `given.files` under `os.Root` in
    a fresh temp root per fixture, enforcing the profile's containment grammar
    (relative paths, no `..`, link targets inside the root, modes, count and byte
@@ -32,7 +34,7 @@ SCOPE — serial PRs, one behavior each, in this order (merge before the next):
    `fixtures/keys`, recorded outbound HTTP only (an unrecorded call fails the fixture);
    chains and captures; exact comparison — status, headers (RE2 where stated),
    body, `then.events` by reason and class, `then.state` over the logical records
-   (packet 02 phase 3 projection); absence assertions; hash check against
+   (packet 02 phase 2 projection); absence assertions; hash check against
    `fixtures/MANIFEST.json`; a skipped locked fixture is a failure; zero expectations
    of its own. It also runs the frozen mcp-sso portable §8 fixtures (numeric-clause
    subset, same spine) — that run is how the verifier is proven. A test fails if any
@@ -95,7 +97,8 @@ SCOPE — serial PRs, one behavior each, in this order (merge before the next):
    boot order: validate in full → create the store directory `0700` if absent and
    check the path under B2 → open the audit sink (B2) → listen; nothing before
    validation passes. `livez`/`readyz` exactly per #61 as ruled (readiness per mode
-   and capability: store directory and audit sink open, key loaded; never upstream
+   and capability: in this slice the store directory admissible under B2, the audit
+   sink open, the key loaded — there is no database until slice 2; never upstream
    reachability); `SIGTERM` stops accepting, drains non-stream requests for the B8
    bound, cancels every stream's context, force-closes after the bound — Go's
    `Shutdown` alone waits forever on an open stream. Flow audit
@@ -117,7 +120,7 @@ test mints its own token with the test signing key.
 HARD RULES: implement only what the locked fixtures and the pinned sections require;
 no special-casing fixture strings; no invented library APIs (grep the module source);
 stdlib first — every dependency justified in the PR with version, publish date, and
-age against `tools/depage.py`; **never touch docs/ or fixtures silently** — follow the
+age as human evidence (there is no age script; Dependabot cooldown is the gate); **never touch docs/ or fixtures silently** — follow the
 review checkpoint in `prompts/README.md`; a gap is a PR comment, then continue; fail
 closed on every ambiguity; no `value || default` on a security selector; `O_NOFOLLOW`
 opens; explicit directory modes; `umask 077` at boot.

@@ -7,8 +7,10 @@ implement. Each was found by evidence (a live probe, the merged validator, the
 Kubernetes file model) after the pages were written. Closing them now is what keeps
 slice 2 from discovering them.
 
-Read first, fully: docs/roadmap.md §2 · docs/open-questions.md #5, #53, #54, #55,
-#56, #57, #58, #59 and the B8 configurability note in docs/contract-boundaries.md ·
+Read first, fully: docs/roadmap.md §2 · docs/open-questions.md #5, #24, #53, #54,
+#55, #56, #57, #58, #59, #60, #61, #62, #63, #64, #65, #66, #67 — each item below
+names its question; implement the owner's words on that question, never this
+packet's summary — and the B8 configurability note in docs/contract-boundaries.md ·
 docs/contract.md §2, §3, §8, §9, §14 · docs/contract-grants.md G4, G7 ·
 docs/contract-boundaries.md B1, B2, B4, B5, B7, B8 · docs/deltas.md ·
 docs/threat-model.md · docs/decisions.md · docs/quality-bar.md · the PR 5 description
@@ -23,9 +25,11 @@ in one sitting may share one PR when they touch different sentences.
    - contract-grants.md G4 rewritten: the two fields live on the consent page and
      arrive in the approve POST with the signed consent, bound by its JTI; the
      policy step (G-c) runs at approve time on the submitted values; the
-     authorize-parameter carrier and its singleton guard are removed (a future
-     client that can send them gets prefilled fields, nothing more); a re-run after
-     approval shows the approved values and offers approve or deny only.
+     authorize-parameter carrier and its singleton guard are removed and nothing
+     prefills from authorize parameters in v0; two consent tokens — C1 (`entry`)
+     whose POST validates, runs policy, and claims an approved pre-approval when the
+     hash matches, then renders the locked confirmation page under C2 (`confirm`)
+     whose POST alone runs A7/A8; a C1 replay or a C2 at the entry stage is refused.
    - G6: A1/A2/A3 preflight and public outcomes move to the approve operation
      (the authorize step ends at the consent page for every request that passes
      §9.3 steps 1–4 and the ceiling); A6's claim happens at approve time too; the
@@ -115,28 +119,40 @@ in one sitting may share one PR when they touch different sentences.
     the allowed set never comes from the token" (RFC 7515 requires processing the
     header; RFC 8725 forbids trusting it). Mechanical wording; no ruling needed, but
     the ledger notes it.
-14. `docs(contract): the pre-handler exhaustion envelope` (#63, as ruled) — B8
-    rows for header-read timeout, body-read deadline, idle timeout, TLS handshake
-    timeout, listener connection cap, unauthenticated per-IP `/mcp` budget; B5 gains
-    the time dimension; threat-model rows for slow headers, slow bodies, anonymous
-    stream churn, shutdown under live streams.
+14. `docs(contract): the pre-handler exhaustion envelope` (#63, as ruled — do not
+    dispatch until the ruling carries the numbers) — B8 rows for header-read
+    timeout, body-read deadline, idle timeout, listener connection cap, bounded
+    per-IP state plus a global anonymous budget on `/mcp`; the TLS handshake bound
+    goes to §14 as an ingress obligation (Atesaki has no inbound TLS); B5 gains the
+    time dimension; B8 also gains the header-bytes clause as two protocol-specific
+    `net/http` observables (HTTP/1.1 and HTTP/2), never a portable raw byte count;
+    threat-model rows for slow headers, slow bodies, anonymous stream churn,
+    shutdown under live streams.
 15. `docs(contract): durable events reach the JSONL stream at least once` (#64, as
-    ruled) — G12 and G2 (`grant_event` outbox): a persisted projector cursor over
-    `seq`, resume on restart, duplicates deduplicated by `event_id`; flow events
-    lossy and counted; the "loss is possible only for flow events" sentence made
-    true by construction.
-16. `docs(contract): schema version, migration, backup, hard key rotation` (#65, as
-    ruled) — contract.md §13/§14 persistence and upgrade sentences; B2 for the
-    backup file; a `deltas.md` row is not needed (Atesaki-only).
+    ruled) — G12 and G2 (`grant_event` outbox): serialized sink writes; append and
+    `fsync`, then advance the cursor kept in the store; a crash between the two
+    duplicates, never loses; consumers deduplicate by `event_id`; flow events lossy
+    and counted; the "loss is possible only for flow events" sentence made true by
+    construction.
+16. `docs(contract): credential epoch, schema version, migration, backup, hard key
+    rotation` (#65, as ruled) — G2 gains the epoch on `grant`, the refresh family,
+    and `authorization_code`; G6 A9/A10/A12 gain the epoch predicate (`invalid_grant`
+    on mismatch); contract.md §13/§14 persistence and upgrade sentences; B2 for the
+    backup file; the never-8 matrix gains "a pre-rotation code or refresh token
+    cannot mint under the new key"; a `deltas.md` row for the epoch predicate on
+    inherited rows.
 17. `docs(contract): hash vector, A6b atomicity, A9′ mapping` (#66, as ruled) — G3
     gains the byte-exact vector and the approved object; A6b is one transaction;
     A9′ predicates each map to one public error, with a `deltas.md` row if the
     inherited mapping differs.
-18. `docs(contract): v0 scope` (#67, as ruled) — if machine clients defer: G10,
-    A12, A13, D10a–D10c, and the B1 `machineClients[]` row move to `future.md` with
-    a pointer, the boot contradiction check's machine branch is retired, and
-    `validate` refuses `machineClients[]` as unknown until v0.1; §13's scope pin and
-    the README say so. If kept: nothing changes.
+18. `docs(contract): v0 scope` (#67, as ruled; lands **before** packet 02 phase 2)
+    — if machine clients defer: G10, A12, A13, D10a–D10c, the B1 `machineClients[]`
+    row, the machine B7 reasons, the machine G5 states, and onboarding step 9 move to
+    `future.md` with a pointer; §13's scope pin and the README say so; the Go
+    change (`validate` refuses `machineClients[]` as unknown, the contradiction
+    check's machine branch retired, the example and tests swept) is packet 02 phase
+    2a, not this PR. If the sweeper and retention purge defer too: A14's sweeper
+    clause and A15 move the same way, lazy expiry stays. If kept: nothing changes.
 
 HARD RULES: one ruling per PR; nothing beyond the owner's words; every "never"
 added carries the test a wrong build fails, named as a fixture id for packet 03;

@@ -29,11 +29,17 @@ SCOPE — serial PRs, one invariant each, in this order:
    retention purge after 30 days (B8), idempotent, a `grant` only after its codes
    and family expired; `grant_event` rows never purged; flow `retention_purged` with
    count and oldest terminal timestamp.
-3. `feat(store): migrations, backup, restore` — #65 as ruled: the migration
-   framework already present since slice 2 gains its first real migration test (a
-   crash mid-migration leaves the old schema intact); `atesaki backup <path>` via
-   SQLite's online backup under B2 file rules; restore tested on a real cluster;
-   hard key rotation documented as replace, restart, every token dies.
+3. `feat(store): credential epoch, migrations, backup, restore` — #65 as ruled:
+   grants, refresh families, and codes carry the credential epoch (the signing key's
+   fingerprint); rotation and restore advance it; a mismatched epoch refuses with
+   `invalid_grant`; a negative test proves a pre-rotation code and refresh token
+   cannot mint under the new key; the migration framework present since slice 2
+   gains its first real migration test (a crash mid-migration leaves the old schema
+   intact); `atesaki backup <path>` via SQLite's online backup under B2 file rules;
+   restore tested on a real cluster; hard key rotation documented as replace,
+   restart, every credential dies. The upgrade fixture is a real schema-v1 database
+   created by the pinned slice-2 commit's binary, archived with its checksum — no
+   earlier release tag exists.
 4. `test(e2e): machine client and upgrade` — the named real input (below).
 
 HARD RULES: as prompts/README.md. A predicate that cannot be evaluated where G6 puts

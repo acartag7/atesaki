@@ -28,7 +28,13 @@ you would otherwise inherit; read the row before implementing the clause it touc
 §M4 (gotcha rows 1, 2, 3, 6–10, 17, 21, 23, 27) · docs/decisions.md (why each rule is
 the way it is — do not relitigate).
 
-SCOPE — serial PRs, one behavior each, in this order:
+SCOPE — serial PRs, one invariant or chain each, in this order:
+0. `feat(config): the slice-2 configuration fields` — fixture-driven, first:
+   `clients.cimd.liveFetch` with its allowlist, `clientOriginIn`, the approver
+   objects (packet 12), `knownCimd` references consumed (packet 02 phase 3 must be
+   merged), the forbidden credential header names (packet 14 item 5), and the full
+   inherited mcp-sso §10 redirect-entry grammar with the `inherited` fixtures that
+   pin it — this PR empties the B1→parser pending list.
 1. `feat(store): port, memory adapter, conformance suite` — the Go interface with
    exactly the operations G6 needs (one transaction per A-row: authoritative reads,
    CAS predicates, mutations, durable events); the conformance suite as the contract
@@ -53,7 +59,11 @@ SCOPE — serial PRs, one behavior each, in this order:
    (`busy_timeout`, foreign keys, `synchronous=FULL`) and `BEGIN IMMEDIATE` apply to
    every transaction — state the driver's DSN or hook that sets them and the
    transaction API used; a schema-version row, forward-only migrations in one
-   transaction, downgrade refused at open (#65 as ruled); local filesystem only.
+   transaction, downgrade refused at open (#65 as ruled); a **server-instance lock**
+   held only by `serve` — a second `serve` refuses to start, while the grants CLI
+   and the backup command open the store transactionally and are never locked out
+   (test all three: two `serve`, `serve` plus CLI, `serve` plus backup); local
+   filesystem only.
 3. `feat(as): metadata, stateless DCR, CIMD` — origin AS metadata (fields per
    §9.1/RFC 8414 as inherited; `scopes_supported` per the #53 ruling); stateless DCR
    per §9.2 with the redirect allowlist (§10); vendored CIMD from `knownCimd` refs;
@@ -77,13 +87,17 @@ SCOPE — serial PRs, one behavior each, in this order:
    the new condition.
 6. `feat(grants): the consent-page carrier and A1–A3 with lazy expiry` — the
    consent page carries purpose and duration (#62 as ruled): two fields, POSTed with
-   the signed consent, bound by its JTI, never in a URL; hostile text refused or
-   escaped under the inherited page controls; G-a validation of the submitted
-   values; the policy step at approve time on those values: `allow` → A8's issuance
-   continues; `deny` → `access_denied`; escalate → insert `grant_request` +
-   `preapproval` per A3 with dedupe and both caps, `approval_pending` +
-   `request_id`; decider error → `temporarily_unavailable`; G6 rows as rewritten by
-   packet 14 item 0. **This slice owns A14's lazy path** for every row it reads: the
+   the signed consent, never in a URL; **two consent tokens**: C1 (stage `entry`)
+   rendered after §9.3 steps 1–4 and the ceiling — its POST consumes C1's JTI, runs
+   G-a validation and policy on the submitted values (`deny` → `access_denied`;
+   `allow` → A8; escalate → insert `grant_request` + `preapproval` per A3 with
+   dedupe and both caps, `approval_pending` + `request_id`; decider error →
+   `temporarily_unavailable`) and, when the values hash to an approved
+   pre-approval for the tuple, claims it (A6) in the same transaction and renders
+   the locked confirmation page under C2 (stage `confirm`); C2's POST alone runs
+   A7/A8; a C1 replay and a C2 at the entry stage are refused; nothing prefills
+   from authorize parameters; hostile text refused or escaped under the inherited
+   page controls; G6 rows as rewritten by packet 14 item 0. **This slice owns A14's lazy path** for every row it reads: the
    cap and dedupe read in A3, and the reads in A6/A9/A10, first transition past-due
    rows they touch (G5) inside the same transaction with their durable events, or
    expired pending rows keep consuming the cap. M5 adds the sweeper.
@@ -113,10 +127,12 @@ SCOPE — serial PRs, one behavior each, in this order:
    for **A10** as well as A8/A9: failpoints immediately before commit and after
    commit before response; for A10 the client's retry after the lost response is
    constructed and its A10′ outcome (family and grant revoked) asserted.
-7a. `feat(audit): durable event projection with a cursor` — #64 as ruled: the
-   JSONL projector keeps a persisted cursor over `grant_event.seq`, resumes on
-   restart, deduplicates by `event_id`; flow events direct and lossy with
-   `audit_sink_failed` counted.
+7a. `feat(audit): durable event projection with a cursor` — #64 as ruled: sink
+   writes serialized; the projector appends and `fsync`s the line, **then** advances
+   the cursor kept in the store; a crash between the two duplicates, never loses;
+   consumers deduplicate by `event_id` (the projector does not scan JSONL); fixtures
+   for sink failure, crash after sync before advance, and rotation; flow events
+   direct and lossy with `audit_sink_failed` counted.
 8. `feat(identity): entra, oidc` — redirect flow, id_token verification (issuer,
    audience, nonce, expiry, signature under the JWKS fetched through
    `identity.egressProfile`), groups from the claim only; Entra **exactly as mcp-sso

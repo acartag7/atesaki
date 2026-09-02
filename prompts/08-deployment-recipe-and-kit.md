@@ -35,8 +35,9 @@ DELIVERABLES
    `strategy: Recreate` (a rolling update runs two pods on one SQLite file), a
    `ReadWriteOncePod` claim on a named CSI storage class where available — else
    `ReadWriteOnce` with the Recreate strategy stated as the guard — on a local
-   filesystem (WAL is not for network filesystems), and the binary's startup lock so
-   a second process refuses to start; the volume mounted over a path the image does
+   filesystem (WAL is not for network filesystems), and the binary's server-instance
+   lock (slice 2) so a second `serve` refuses to start while `kubectl exec … atesaki
+   grants` and `atesaki backup` still work; the volume mounted over a path the image does
    not own, with `fsGroup` and `fsGroupChangePolicy` so the non-root process can
    create the store subdirectory (`0700`) on first boot — **first boot and restart
    proven on a real cluster**, never assumed; **one ingress controller and version
@@ -57,9 +58,10 @@ DELIVERABLES
    the grant and the agent signs in again (A10′); a group removed after activation
    does not revoke the grant — refresh rechecks nothing until expiry or revocation,
    the levers are a shorter `maxDuration` and `grants revoke`; what a store-file loss
-   means (key rotation, every token dies); the upgrade path as #65 rules it (schema
+   means (key rotation, every credential dies); the upgrade path as #65 rules it (schema
    migration forward-only, downgrade refused, the backup command and a tested
-   restore, hard key rotation = replace, restart, every token dies); audit rotation
+   restore, hard key rotation = replace, restart, every credential dies — codes and
+   refresh tokens included, via the credential epoch); audit rotation
    preserves every line already written (reopen, never truncate) while flow-event
    loss stays the accepted, counted residual and durable events re-project from the
    store (G12, #64) — no losslessness claim beyond that; how active streams end at

@@ -31,12 +31,17 @@ SCOPE — build exactly this:
   duration (#62) and the `approval_pending` redirect.
 - Output: per profile and rung, the step reached and the exact refusal if any
   (resource, field, rule, or public error code); never a secret, never a token.
-- A config that cannot rehearse (e.g., `identity.provider: header` with a JWKS URL)
-  says why in one line and what the profile would need.
+- The matrix is explicit, so no session decides which flows are positive: an
+  `allow`-policy chain reaches `/mcp`; an escalation chain ends green at the
+  expected `approval_pending` with its `request_id`, or invokes the grants CLI on
+  the loopback store and re-runs to `/mcp`; a signed-header profile uses a recorded
+  JWKS exchange (`jwksUrl`) or a static `jwksRef`; the console profile pairs on
+  loopback; a rung or config outside the matrix says so in one line. Every profile
+  is expected green on the shipped examples that fit its rung, not on all three.
 
 HARD RULES: loopback only for both listeners, refused otherwise before any state
-write; never contacts the real IdP, a real upstream, or the network at all (the
-runner's egress port fails any unrecorded call); the memory adapter is never
+write; never contacts the real IdP, a real upstream, or any non-loopback address
+(the runner's egress port fails any unrecorded call); the memory adapter is never
 reachable from `serve`; no new behavior in the authorization server — a rehearsal
 that needs one is a contract gap; prompts/README.md conventions.
 

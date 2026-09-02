@@ -37,7 +37,15 @@
    refused before any network call; with an operator-chosen destination the allowlist
    is the SSRF control, so the fetch may use the profile; when the profile is direct
    the inherited validated-IP dial applies as written; the remaining inherited caps
-   are cited by clause. A new `deltas.md` row. Arnold decides.
+   are cited by clause. A new `deltas.md` row. **Honesty notes:** the contract
+   *specifies* the guarded fetch; the shared corpus does not yet prove it (two draft
+   8.4 fixtures exist, no CIMD fixture) — Atesaki's own `inherited` fixtures carry it
+   until then. In proxied mode the proxy resolves the name, so the address-level
+   defense (private ranges, DNS rebinding) is **lost** and must be named an accepted
+   residual that requires a trusted egress proxy enforcing it; the allowlist is
+   operator policy, not an address-level control. The safest v0 ships live fetch in
+   **direct mode only** and defers proxied live fetch (in a proxied enterprise that
+   means per-user vendoring for Codex until v0.1). Arnold decides which.
 6. ~~In-cluster TLS/mTLS to upstreams~~ **DECIDED 2026-08-31 (Arnold): recipe
    obligation only in v0** — the product cannot enforce network position; §14 states
    it plainly; `validate --deep` warns on plain-http upstreams beyond loopback/private
@@ -232,6 +240,15 @@ future additions to grants extend the table, never the prose.
     Alternative: keep approvers as IdP groups and have the CLI take an authenticated
     subject token — real authn, but it needs the whole token flow the CLI was meant to
     bypass. Arnold decides; then the packet is a one-page contract-change PR.
+    **Roadmap note 2026-09-02:** call it what it is — a **single-operator authority
+    model**. The authority value is the numeric effective uid (B2's `0600` store is
+    openable by one uid, so a list of several OS users cannot satisfy B2 in v0);
+    configured `osUser` names resolve to uids at boot and both are recorded on every
+    durable event with an invocation correlation id; a supplied name is
+    `claimed_approver`, evidence never authority; the platform's exec audit trail is
+    the human-identity source (§14 obligation); Atesaki authenticates no person and
+    no sentence may read as if it did. CLI authority is proven by suite receipts with
+    an injected effective-identity port — the fixture profile has no command carrier.
 
 ## Added 2026-08-31 after review round 5
 
@@ -301,7 +318,9 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     inherited mcp-sso §17.4, not `invalid_scope`. **Proposal:** two stages — catalog
     narrowing first (empty → `invalid_scope`, a new `deltas.md` row), then the
     inherited group ceiling unchanged (empty → `access_denied`); the narrowed `scope`
-    returned in the token response; packet 16 confirms Codex accepts it.
+    returned in the token response. **Not to be closed until packet 16 has shown**
+    Codex and Claude Code accept a narrowed `scope` in the token response; if either
+    does not, the fallback is to omit `scopes_supported` and re-probe.
 
 ## Added 2026-09-02 with the roadmap (`docs/roadmap.md` §2)
 
@@ -320,7 +339,7 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     by slice against the draft (PR 5); `prompts/README.md`, `quality-bar.md`, and
     packets 05–07 still gate every line of Go on a single `contract-v0-freeze` tag.
     **Proposal:** freeze per slice — when a slice starts, the sections it implements
-    are SHA-pinned in its packet, their Atesaki fixtures hash-locked, and the mcp-sso
+    are SHA-pinned in its packet, their Atesaki fixtures slice-locked, and the mcp-sso
     citations for those sections pinned; the owner reads those pages, not the whole
     set; `contract-v0-freeze` is applied when the whole portable set is green (end of
     slice 3). The "slices before freeze" decision already taken by merging PR 5 gets a
@@ -378,9 +397,10 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     probe that includes upstream reachability takes a multi-route gateway out of the
     load balancer whenever one backend flaps (the seed recipe did this). **Proposal:**
     `livez` = the process serves; `readyz` per identity mode and shipped capability
-    — slice 1: store directory and audit sink open, signing key loaded; slice 2 adds
-    "identity JWKS fetched at boot" only for modes that fetch one (console and a
-    static `jwksRef` never do) — never upstream reachability, which is `validate
+    — slice 1: store directory admissible under B2, audit sink open, signing key
+    loaded (there is no database until slice 2); slice 2 adds "database open,
+    migration state current" and "identity JWKS fetched at boot" only for modes that
+    fetch one (console and a static `jwksRef` never do) — never upstream reachability, which is `validate
     --deep`'s job; `SIGTERM` stops accepting, drains non-stream requests for a
     bounded time (a B8 number), cancels every stream's context, and force-closes
     after the bound (Go's `Shutdown` alone waits forever on an open stream). Owned
@@ -397,8 +417,17 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     principal clients on day one. **Proposal (reverses #35a with evidence):** the
     consent page is the carrier — two fields, purpose and duration (defaulting to
     the route maximum), POSTed with the signed consent; the policy step (G-c) runs at
-    approve time on the submitted values; a re-run after approval shows the approved
-    values and asks only approve or deny; the authorize-parameter carrier is dropped.
+    approve time on the submitted values; the authorize-parameter carrier is dropped
+    (no prefill from authorize parameters in v0). **The state machine, explicit:**
+    the page rendered after §9.3 steps 1–4 and the ceiling carries consent token C1
+    (scopes, ceiling, `request_id`; stage `entry`); its POST consumes C1's JTI and
+    runs G-a validation and policy — `deny` terminates (A2), `allow` issues (A8),
+    `escalate` records the request (A3); when the submitted values hash to an
+    approved pre-approval for the tuple, the claim (A6) happens in that same
+    transaction and the response is a **locked** confirmation page showing the
+    approved values under a fresh consent token C2 (stage `confirm`); C2's POST alone
+    runs A7 or A8. Two tokens, one discriminator, no ambiguity about which of up to
+    three pending requests a re-run means.
     Consequences: G4/G6 (A1–A3 evaluate policy at approve time; D5 rewritten), D3
     (the consent token no longer carries purpose and duration; the approve POST does,
     bound by the JTI), B7 (malformed purpose or duration refused on the approve
@@ -406,33 +435,54 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     browser history, ingress logs, or referrers), and hostile-purpose fixtures (HTML,
     Unicode, control characters, size) under the inherited page controls (HTML
     escaping, CSP, `nosniff`, `Cache-Control: no-store`, referrer policy) cited by
-    clause. Packet 16 confirms the clients complete a consent page with two extra
-    fields. Arnold decides.
+    clause. Packet 16 is to confirm that both clients complete a consent page with
+    two extra fields (not yet observed; the no-custom-parameter result for Codex is
+    already recorded). Arnold decides.
 63. **No pre-handler exhaustion envelope.** B5 bounds bytes and counts and B8 bounds
     authenticated streams, but nothing bounds *time* before identity: no header-read
     timeout, body-read deadline, idle timeout, TLS handshake timeout, listener
     connection cap, or unauthenticated per-IP budget on `/mcp`. Slow headers, slow
     bodies, or anonymous connection churn exhaust the process before any route,
-    identity, or subject limit runs. **Proposal:** B8 rows for each (numbers to be
-    "ok"ed), enforced in slice 1 and proven with real-socket slow-header and
-    slow-body tests. Arnold decides.
+    identity, or subject limit runs. **Proposal (numbers for the owner's "ok"):**
+    header-read timeout 10 s; body-read deadline 60 s on non-stream requests (the
+    upstream timeout); idle timeout 120 s; listener connection cap 1 024 (a bounded
+    global semaphore); unauthenticated per-IP budget on `/mcp` 120 per 60 s with
+    bounded per-IP state (at most 10 000 tracked addresses, least-recently-seen
+    evicted) **plus** a global anonymous budget so IP cardinality cannot exhaust the
+    limiter itself; a TLS handshake bound belongs to the pinned ingress recipe —
+    Atesaki has no inbound TLS configuration in B1 and terminates TLS at the ingress
+    (Go would derive a handshake bound from the read timeouts if it ever served TLS).
+    Enforced in slice 1 and proven with real-socket slow-header and slow-body tests.
+    Arnold decides.
 64. **Durable events are not guaranteed to reach the JSONL stream.** G12 says loss is
     possible only for flow events, but the JSONL fan-out of `grant_event` rows has no
     cursor or retry, so a durable event can be missing from the advertised combined
     stream after a sink failure or a crash. **Proposal:** the store is the durable
     audit of record; the JSONL projector keeps a persisted cursor over
     `grant_event.seq`, resumes on restart, and so delivers durable events at least
-    once (duplicates possible, deduplicated by `event_id`); flow events stay lossy
-    and counted. G12 says exactly that. One cursor, no dispatcher framework. Arnold
-    decides.
+    once; flow events stay lossy and counted. **Crash boundary, explicit:** sink
+    writes are serialized; the projector appends and `fsync`s the line, **then**
+    advances the cursor in the store — a crash between the two duplicates the event,
+    never loses it; duplicates are possible and **consumers** deduplicate by
+    `event_id` (the projector does not scan JSONL to suppress them). Fixtures pin sink
+    failure, crash after sync before cursor advance, and rotation. G12 says exactly
+    that. One cursor, no dispatcher framework. Arnold decides.
 65. **The first upgrade has no design.** No store schema version, migration,
     backup, restore, or downgrade refusal exists, and B1 has one signing key with no
     rotation story beyond "store loss ⇒ rotation ⇒ all tokens die". **Proposal:** a
     schema-version row; forward-only migrations inside one transaction; downgrade
     refused at open; SQLite online backup as the recipe's backup command with a
     tested restore; key rotation in v0 is hard and honest — replace the key, restart,
-    every token dies; no key ring, no overlap window in v0 (that is future work with
-    key ids). §14's "upgrade behavior" points at it. Arnold decides.
+    every token dies — **which is only true if the store's opaque credentials die
+    too**: authorization codes and refresh tokens are stored by hash, not signed, so a
+    pre-rotation code or refresh token would still mint a fresh access token under
+    the new key, and a restored backup would resurrect revoked refresh state. So:
+    grants, refresh families, and codes carry a **credential epoch** (the signing
+    key's fingerprint); rotation and restore advance the epoch; a mismatched epoch is
+    refused (`invalid_grant`); a negative fixture proves a pre-rotation code and
+    refresh token cannot mint under the new key. No key ring, no overlap window in
+    v0 (that is future work with key ids). §14's "upgrade behavior" points at it.
+    Arnold decides.
 66. **Hash bytes, A6b atomicity, A9′ error mapping.** `purpose_hex` has no byte,
     trim, or case rule; `approved_hash` names no exact member set; A6b does not say
     whether the invalidation and the following A3/A2 are one transaction or two;
@@ -451,4 +501,12 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
     nothing in the human loop — and keep **rung 4** (signed proxy assertions),
     because "no IdP change at all" is the positioning sentence. Reverses the
     2026-08-31 machine-clients ruling if taken. The roadmap marks machine clients as
-    "M5 if kept". Arnold decides.
+    "M5 if kept". **Not a docs-only change:** the merged validator already accepts
+    `machineClients[]`, one of the three valid examples declares one, and the record
+    types, B7 reasons, G5 states, onboarding step 9, and rehearsal assumptions all
+    carry machine shapes — deferral needs one config-boundary PR that makes
+    `machineClients` an unknown field for v0 and sweeps every sibling, **before**
+    packet 02 generates record schemas. The reviewer also suggested deferring the
+    periodic sweeper and retention purge (keeping lazy expiry) and proxied live
+    CIMD; the store-growth residual is already named, so that is a scope call too.
+    Arnold decides, ideally first.

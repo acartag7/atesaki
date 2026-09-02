@@ -12,9 +12,10 @@ the security surface it opens, and the tests that prove it, is in `docs/roadmap.
 ```
  RETIRED         00 prose review · 01 repository bootstrap (contract gate abandoned)
 
- M0              16 client compatibility spike (two days; informs #62, #53, #5)
-                 13 repo hardening — CI required on main, license, SECURITY.md,
-                    dependency cooldown, grammar fixes, name check, STATE refresh
+ M2 step 0       16 client compatibility spike (two days, runs first; informs #62, #53, #5)
+ M0              13 repo hardening — CI required on main with admin bypass off, license,
+                    SECURITY.md, sanitization grep, dependency cooldown, two grammar
+                    fixes, name check, STATE refresh
  M1              02 config drift check + record types (RESCOPED, waits on #54)
  M2              14 contract closure — #62 consent-page carrier, #53 two-stage ceiling,
                     #5 live fetch, #56 knownCimd refs + config-file exception, #57
@@ -25,8 +26,9 @@ the security surface it opens, and the tests that prove it, is in `docs/roadmap.
                  03 phase 0 (fixture profile) then phase 1 (slice-1 fixtures)
                  04 threat model + negative matrix
                           │
-                 PER-SLICE FREEZE (#55): the slice's sections SHA-pinned in its packet,
-                 its fixtures hash-locked, the owner has read those pages
+                 SLICE LOCK (#55): the slice's sections SHA-pinned in its packet, its
+                 fixtures' hashes in fixtures/LOCK-<slice>.json, the owner has read
+                 those pages; "freeze" is reserved for §19 frozen fixtures and the final tag
                           │  strictly serial from here — no parallel dispatch:
  M3              05 Go slice 1 — runner + relay + verifier + validate --deep
                     (needs the frozen mcp-sso §8 verifier fixtures — cross-lane input;

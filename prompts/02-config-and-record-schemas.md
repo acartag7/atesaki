@@ -38,12 +38,30 @@ PHASE 1 — `test(config): B1 to parser drift check`
   `docs/contract-boundaries.md` (markdown rows `| field | type | rule |`; nested
   fields written inside the type cell as `{a, b?, c}` — state the parsing rules in the
   test file's header comment) into the same path/type/requiredness triples.
-- Compare both directions; print both diffs; empty or fail. Where the table and the
-  parser disagree, STOP and list every disagreement as a contract gap in the PR —
-  never pick a side in code.
-- Done when both diffs are empty or every difference is an owner-acknowledged gap.
+- Compare both directions; print both diffs. The parser→B1 direction **fails** (an
+  undocumented accepted field is a defect). The B1→parser direction is a **pending
+  list**: printed on every run, allowed to be non-empty while a contract-first PR
+  has added a field the code does not read yet and through a slice lock, and
+  required empty at each slice's completion (the slice's first, fixture-driven
+  configuration PR closes it) — the test takes the list of currently accepted gaps
+  from `internal/config/testdata/pending-b1.txt`, which the slice-completion review
+  must empty. Where the table and the parser disagree on a field both know, STOP
+  and list it as a contract gap in the PR — never pick a side in code.
+- Done when the parser→B1 diff is empty and every B1→parser gap is listed.
 
-PHASE 2 — `feat(records): G2 record types and generated schemas`
+PHASE 2a — `feat(config): machineClients is unknown in v0` (only if #67 defers
+machine clients; runs before phase 2 either way once #67 is ruled)
+- `machineClients[]` becomes an unknown field (`B1.unknown-field`), the machine
+  branch of the G7 boot contradiction check is retired, the valid example
+  `header-assertion-machine-client.yaml` loses its machine block (rung 4 stays), the
+  machine refusal cases move to `testdata/deferred/` with a note, and the types drop
+  the machine shapes. Sweep every sibling in the same PR: `internal/config/types.go`,
+  `parse.go`, `validate.go`, the three examples, the refusal suite. The contract
+  side (G10, A12, A13, D10a–D10c, B1 row, B7 reasons, G5 states, onboarding step 9)
+  is packet 14 item 18, which lands first.
+
+PHASE 2 — `feat(records): G2 record types and generated schemas` (after #67 is
+ruled, so the record shapes are the v0 shapes)
 - `internal/records`: one Go type per G2 record — `grant_request`, `preapproval`,
   `grant`, the `authorization_code` delta fields, `grant_event`, `machine_tombstone`.
   Make illegal states unrepresentable: `state` is a closed enum; fields G6 sets only in
