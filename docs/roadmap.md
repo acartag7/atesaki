@@ -25,8 +25,8 @@ to explain a gotcha, the contract's sentence wins and the paraphrase is not a ru
 
 Rules that every milestone inherits (`prompts/README.md`, `docs/quality-bar.md`):
 one self-explanatory review unit per PR — a unit is an invariant or a protocol
-chain with all its fixtures, never one test case · fixtures for a slice are
-slice-locked before that slice's code starts · every implementation PR gets a packet-11 adversarial
+chain with all its fixtures, never one test case · a slice's fixtures are merged
+and read by the owner before that slice's code starts · every implementation PR gets a packet-11 adversarial
 review before merge · never weaken a fail-closed control to pass a test · a contract
 mismatch is a proposal plus an owner checkpoint (#52), never a silent edit · verify by
 running a real input and name it.
@@ -38,7 +38,7 @@ running a real input and name it.
 | Contract set | drafted; ~50 rulings receipted in `decisions.md`; lint green; not frozen |
 | Product code | config boundary and the two pure verbs merged (PR 5, PR 6); 3 valid examples, 71 refusal cases, build/vet/test green |
 | Evidence | live discovery probe recorded (PR 4, open): D1 confirmed for Codex CLI 0.151.0 and Claude Code 2.1.257; #5 and #53 now carry evidence that forces an answer |
-| mcp-sso lane | the parity runner is landing as serial PRs on `main` (fifteen of PRs 374–392 merged, 388 and 391 open, 384 and 389 closed; `main` at `1f6911b`); draft PR 340 is superseded; only the two draft 8.4 fixtures exist, no `MANIFEST.json` |
+| mcp-sso lane | the parity runner is **done** and runs in CI (`main` at `63ed987`; verified locally: the two 8.4 fixtures pass through Fastify, Express, and Hono, zero skips); PR 340 closed; nothing is frozen yet — both fixtures are `draft` with no `receipt`, and the corpus is two fixtures; no manifest, catalogue, or hash gate is to be built (#30, #50) |
 | Repo hygiene | public repo; no CI workflow, no branch protection, no LICENSE, SECURITY.md, or `.gitignore` |
 | Packets | 02 conflicts with the merged Go validator (#54); 05–09 assume a single freeze that practice has already moved past (#55); nothing owns `rehearse`, `idp-request`, or the operator-side k8s facts |
 
@@ -191,20 +191,23 @@ and packaging calls that can land any time before their packet.
 11. **#54 — packet 02 is superseded by the Go validator.** `[decide]`
     *Recommend:* drop the config JSON Schema; add a mechanical B1↔parser drift test in
     Go — parser→B1 strict at all times (no undocumented accepted field), B1→parser
-    reported as pending gaps that may persist **through** the slice lock (the lock
-    pins fixtures the old parser must fail) and must be empty at slice
-    **completion**, closed by the slice's first, fixture-driven boundary PR; write the
+    reported as pending gaps that may persist while the slice's fixtures are merged
+    ahead of its code and must be empty at slice **completion**, closed by the
+    slice's first, fixture-driven boundary PR; write the
     G2 records as Go types and generate `schema/records/*.schema.json` from them with
     a golden test. Reverses #36's config half only.
 12. **#55 — one freeze or a rolling one.** `[decide]`
-    *Recommend:* a **slice lock** per slice, not a freeze. Vocabulary, since §19 has
-    no fourth status: a fixture stays §19 `draft` until the runner passes it; the
-    slice lock is a separate owner-approved artifact (`fixtures/LOCK-<slice>.json`:
-    fixture hashes, pinned contract SHAs, the owner's read as receipt) that the
-    runner verifies before it runs any locked draft; `MANIFEST.json` hashes govern
-    `frozen` fixtures, which come only from a passing runner with a receipt.
-    `contract-v0-freeze` is the tag when the whole portable set is green. The word
-    "freeze" is reserved for those two.
+    *Recommend:* per slice, and **no machinery** (#30, #50, #52, `quality-bar.md`:
+    "no hash manifest or self-checking workflow decides this; review owns changes").
+    Before a slice's code starts, its fixtures are merged and the owner has read
+    them — the PR approval is the record. A fixture carries only what §19 already
+    puts in the file: `status` (`draft` until a runner passes it, then `frozen` with
+    the `receipt` object naming implementation, version, commit, date) and the
+    clause it pins. No lock file, no manifest, no catalogue, no hash gate: a fixture
+    edited inside an implementation PR is a review-checkpoint finding (#52) that the
+    diff shows. The runner runs every non-superseded fixture and reports by status; a
+    skipped fixture is a failure (never 7). `contract-v0-freeze` is one git tag
+    when the whole portable set is green.
 13. **#56 — B2 file rules on Kubernetes.** `[decide]`
     *Recommend:* `knownCimd[]` entries become B2 references; the recipe states,
     pinned to tested versions, that secrets, CA bundles (`caBundleRef` is already a
@@ -280,14 +283,14 @@ derived from it.
 | 02 | B1↔parser drift test; (phase 2a: `machineClients` removed if #67 defers); G2 record types + generated record schemas; `knownCimd` refs | merged config code | #54 (phases 1–2); #67 (phase 2a, before 2); #56 (phase 3) | after 13 | parser→B1 empty always; B1→parser pending list printed, empty at each slice completion; records golden; phase 3 after packet 14 item 3 and before packet 06 PR 3 |
 | 14 | contract sentences for #62, #53, #5, #56, #57, PR-5 interpretations and header-name rule, #58, #59, #55, #60, #61, #63, #64, #65, #66, #67, B4 `alg` wording, B8 note, matrix window | rulings; packet 16 evidence | each item's ruling | any time a ruling lands | lint green; ledger receipts; fixture ids named for 03 |
 | 12 | G13 authority text, B1 approvers row, audit fields, residuals | #24 ruling | #24 | after the ruling | lint green; fixture intent named for 03 phase 3 |
-| 03 phase 0 | fixture profile + mutation suite; manifest/catalogue tooling | record schemas (02), packet 14 sentences | — | after 02 phase 2 and 14 | profile mutation suite green |
-| 03 phase 1 | slice-1 fixtures (§19 `draft`; slice lock = owner-approved hash list) | profile | — | after phase 0 | slice lock written with the owner's read |
+| 03 phase 0 | fixture profile + mutation suite | record schemas (02), packet 14 sentences | — | after 02 phase 2 and 14 | profile mutation suite green |
+| 03 phase 1 | slice-1 fixtures, `draft`, merged and read by the owner | profile | — | after phase 0 | merged; uncovered clauses listed in the PR |
 | 04 | threat model complete; negative matrix | 03 phase 1 ids | — | after 03 phase 1 | no attacker row without a rule; uncovered list published |
-| 05 | runner, egress, pipeline, verifier, relay, serve, `--deep`, health/shutdown | slice-locked phase-1 fixtures; frozen mcp-sso §8 | #55, #59, #61, #63 (values), JOSE library | after 04 and the §8 freeze | phase-1 + §8 green, zero skips; review clean; real MCP named |
+| 05 | runner, egress, pipeline, verifier, relay, serve, `--deep`, health/shutdown | merged phase-1 fixtures; mcp-sso §8 fixtures `frozen` in their files | #55, #59, #61, #63 (values), JOSE library | after 04 and the §8 fixtures | phase-1 + §8 green, zero skips; review clean; real MCP named |
 | 03 phase 2 | slice-2 fixtures | profile; packet 14 | — | alongside 05; locked before 06 | locked |
-| 06 | the slice-2 configuration fields (first PR, closes the B1→parser gaps), store port + SQLite with the server lock, AS, the whole human loop (allow, escalate, approve, claim, consent, exchange, rotation, revocation), the grants CLI, identity ports, `idp-request` | slice-locked phase-2 fixtures; packet 12; packet 02 phase 3; mcp-sso §07/09/10/11 or listed deferrals | #62, #53, #5, #24, #57, #58, #60, #64, #66 | after 05, packet 12, 02 phase 3, and the phase-2 lock | parity line by clause; B1→parser empty; real sign-in to approval to tool call; review clean |
-| 03 phase 3 | slice-3 fixtures (machine clients if kept, sweeper, retention, projection, upgrade) | profile | #67 | alongside 06; locked before 07 | slice lock |
-| 07 | machine clients (if kept), sweeper, retention, JSONL projection with cursor, schema migration, backup | locked phase-3 fixtures | #67, #65 | after 06 and the phase-3 lock | every G6 row green; `contract-v0-freeze` |
+| 06 | the slice-2 configuration fields (first PR, closes the B1→parser gaps), store port + SQLite with the server lock, AS, the whole human loop (allow, escalate, approve, claim, consent, exchange, rotation, revocation), the grants CLI, identity ports, `idp-request` | merged phase-2 fixtures; packet 12; packet 02 phase 3; mcp-sso §07/09/10/11 or listed deferrals | #62, #53, #5, #24, #57, #58, #60, #64, #66 | after 05, packet 12, 02 phase 3, and the phase-2 fixtures | parity line by clause; B1→parser empty; real sign-in to approval to tool call; review clean |
+| 03 phase 3 | slice-3 fixtures (machine clients if kept, sweeper, retention, projection, upgrade) | profile | #67 | alongside 06; merged before 07 | merged and read |
+| 07 | machine clients (if kept), sweeper, retention, JSONL projection with cursor, schema migration, backup | merged phase-3 fixtures | #67, #65 | after 06 and the phase-3 fixtures | every G6 row green; `contract-v0-freeze` |
 | 15 | `rehearse` + client profiles | runner; full AS | — | after 07 | onboarding step 4 true |
 | 08 | recipe, image, kustomize, client matrix | `idp-request` (06), profiles (15) | matrix window | after 15 | recipe run once end to end |
 | 09 | README, CHANGELOG, release workflow, sanitization in CI, listings | everything | — | after 08 | live verification named |
@@ -365,9 +368,9 @@ registry the parser exposes. The registry records every accessor call, present o
 absent, so an optional field no example uses is still registered; a variant branch
 never executed shows up as a B1→parser miss. The parser→B1 direction fails at all
 times (an undocumented accepted field is a defect); the B1→parser direction is a
-pending list, printed on every run, allowed through a slice lock (the lock pins
-fixtures the old parser must fail), and required empty at each slice's completion —
-closed by that slice's first, fixture-driven configuration PR. This is
+pending list, printed on every run, allowed while a slice's fixtures are merged
+ahead of its code, and required empty at each slice's completion — closed by that
+slice's first, fixture-driven configuration PR. This is
 the executable form of "B1 is not claimed complete until the artifact exists". The record drift test compares G2's field lists **and** which G6 row sets
 each state-dependent field, so ownership by state is checked, not just names.
 
@@ -421,10 +424,10 @@ reason code — each refused by name).
 | Step | Packet | Content |
 | --- | --- | --- |
 | 0 | 16 | the two-day client spike against the PR-4 probe server: what Codex and Claude Code send at authorize (no custom parameters — confirm), whether they accept a narrowed `scope`, how they surface `approval_pending` and `request_id`, whether a consent page with two extra fields completes, per-install CIMD stability; conclusions into open questions #62, #53, #5 |
-| 1 | 14 | contract closure, one ruling per PR: #62 the consent-page carrier, #53 two-stage ceiling (new deltas row), #5 live fetch with its allowlist, #56 `knownCimd` refs and the config-file exception, #57 `clientOriginIn`, the PR-5 interpretations and the credential header-name rule, #58, #59, #55 slice-lock vocabulary, #60, #61, #63, #64, #65, #66, #67, B4 `alg` wording, B8 note, matrix window; lint green; fixtures named as drafts |
+| 1 | 14 | contract closure, one ruling per PR: #62 the consent-page carrier, #53 two-stage ceiling (new deltas row), #5 live fetch with its allowlist, #56 `knownCimd` refs and the config-file exception, #57 `clientOriginIn`, the PR-5 interpretations and the credential header-name rule, #58, #59, #55 per-slice fixtures without machinery, #60, #61, #63, #64, #65, #66, #67, B4 `alg` wording, B8 note, matrix window; lint green; fixtures named as drafts |
 | 2 | 12 | grants authority (#24 ruling): G13 authority text, B1 approvers row, audit fields per verb, the container residual; its fixtures are named by intent and written in 03 phase 3 |
-| 3 | 03 phase 0 | the Atesaki fixture profile (`fixtures/schema/atesaki-fixture.schema.json`): mcp-sso spine + G/B/D/never clause ids + `given.config` as the Atesaki stream (validated by the real parser in the runner) + records from `schema/records/*` + B7 reasons with class + `given.files` for B2 boot fixtures under a containment contract (relative paths only, link targets inside the root, no ownership simulation, count and byte caps); the manifest's clause inventory includes B1 (the config refusal suite as `suite` evidence) and B8 (each number exercised at its boundary); its mutation suite |
-| 4 | 03 phase 1 | slice-1 fixtures: relay §6, nevers 1, 3, 5, 7, B3 host and target grammar, B5 caps, B6 forwarded walk, B7 rows the relay reaches; `MANIFEST.json`/`CATALOGUE.md` generated; every fixture `draft` |
+| 3 | 03 phase 0 | the Atesaki fixture profile (`fixtures/schema/atesaki-fixture.schema.json`): mcp-sso spine + G/B/D/never clause ids + `given.config` as the Atesaki stream (validated by the real parser in the runner) + records from `schema/records/*` + B7 reasons with class + `given.files` for B2 boot fixtures under a containment contract (relative paths only, link targets inside the root, no ownership simulation, count and byte caps); its mutation suite. No manifest, catalogue, or hash gate (#30, #50) — fixture ids carry their clause and the PR lists what is still uncovered |
+| 4 | 03 phase 1 | slice-1 fixtures: relay §6, nevers 1, 3, 5, 7, B3 host and target grammar, B5 caps, B6 forwarded walk, B7 rows the relay reaches; every fixture `draft`; the B1 refusal suite and the B8 boundaries named as covered by their Go tests |
 | 5 | 04 | threat model completed + `negative-matrix.md`; rows for later slices point at planned fixture ids and are counted as uncovered until those land |
 
 **Gates.** Start: the ruling each packet-14 item names; packet 12 needs #24; 03 phase
@@ -517,7 +520,7 @@ change).
 
 | PR | Content |
 | --- | --- |
-| `feat(runner): load and validate Atesaki fixtures` | `LOCK-<slice>.json` verified before any locked draft runs and `MANIFEST.json` for frozen fixtures, both **before** anything is materialized; `given.files` built under `os.Root` (relative paths only, no `..`, link targets inside the root, modes as stated, no ownership simulation — the owner-mismatch rule stays a unit test with an injected stat; count and byte caps); profile validation, chain ordering, clock/randomness/keys/recorded-HTTP ports, exact comparison, absence assertions, RE2 matchers; skipped locked fixture = failure |
+| `feat(runner): load and validate Atesaki fixtures` | runs every non-superseded fixture and reports by `status`; no manifest or lock file to verify (#30, #50); `given.files` built under `os.Root` (relative paths only, no `..`, link targets inside the root, modes as stated, no ownership simulation — the owner-mismatch rule stays a unit test with an injected stat; count and byte caps); profile validation, chain ordering, clock/randomness/keys/recorded-HTTP ports, exact comparison, absence assertions, RE2 matchers; skipped locked fixture = failure |
 | `feat(egress): profiles, proxy, CA per destination` | the one outbound layer; hop-naming errors; references resolved once into the boot snapshot |
 | `feat(http): caps, authority, target parsing, host and origin gate` | the pipeline order above; B6 walk |
 | `feat(verify): ES256 verifier, per-route metadata and challenge` | pinned JOSE library behind the narrow verifier; PRM at the path-inserted location, AS metadata documents at the origin, challenge per route (D1) |
@@ -525,8 +528,9 @@ change).
 | `feat(serve): wire the relay, flow audit, validate --deep, health, shutdown` | boot order: validate → open store path (create dir `0700`) → open audit sink → listen; `livez`/`readyz` and `SIGTERM` drain per #61; `--deep` per #59 |
 | `test(e2e): real MCP behind the relay` | the named real input |
 
-**Gates.** Start: M2 done; mcp-sso §8 portable fixtures frozen with receipts (the
-cross-lane input); slice-1 sections SHA-pinned in the packet (#55). Done: all slice-1
+**Gates.** Start: M2 done; mcp-sso §8 portable fixtures `frozen` in their files with
+the `receipt` object (the cross-lane input); slice-1 sections SHA-pinned in the
+packet (#55). Done: all slice-1
 fixtures green, zero skips; §8 portable green; every inherited clause this slice
 implements has a frozen upstream or an `inherited` Atesaki fixture, or is named as
 uncovered in the parity line and excluded from the capability claim; packet-11
@@ -634,7 +638,7 @@ M5 adds the rows with machines and clocks in them.
 
 | Kind | What |
 | --- | --- |
-| mcp-sso portable | the pinned corpus version + `MANIFEST.json` hash; the exact frozen portable fixture-id set this build passes, listed in the PR before code; zero skips; deferred ids listed with reasons and the modes they defer |
+| mcp-sso portable | the pinned corpus commit; the exact frozen portable fixture-id set this build passes, listed in the PR before code; zero skips; deferred ids listed with reasons and the modes they defer |
 | Atesaki fixtures (03 phase 2) | rungs §4 (each rung's boot refusals and acceptance; rung 4 duplicate header, unsigned header, wrong `kid`, stale JWKS, header stripping, bounded refetch); never 6; the consent-page carrier (#62) with hostile-purpose cases; the two-stage ceiling (#53); `clientOriginIn` (#57); live-fetch allowlist (#5); the limiter-outage delta (#60); Entra overage refusal; D1, D3, D4, D5, D6, D7, D11, D12, D13; A1–A11 with every branch (A3′, A3″, A6a, A6b, A9′, A10′, A10″), A14's lazy path, E1–E3; the projector cursor (#64); never 8 and never 9 as the matrices in §12; an `inherited` fixture for every §7/§9/§10/§11/§17 clause implemented here without a frozen upstream fixture |
 | Store conformance suite | one table per G6 row this slice implements: atomicity, CAS, uniqueness, ordering-free comparison; both adapters; under contention; `serve` refuses memory |
 | Crash tests | the mutable-state × exit-path matrix for every response-returning row this slice ships — A6, A8, A9, **A10** — with named failpoints between preflight and commit and between commit and response; restart; exact state (nothing consumed / committed-with-E1); for A10, the client's retry after the lost response is constructed and its A10′ outcome asserted |
@@ -663,7 +667,7 @@ M5 adds the rows with machines and clocks in them.
 | `test(e2e): real sign-in, approval, and tool call` | the named clients and versions |
 
 **Gates.** Start: M3 done; packet 12 landed; packet 02 phase 3 merged; 03 phase 2
-slice-locked; the mcp-sso §07/§09/§10/§11 portable set frozen **or** the exact
+fixtures merged and read; the mcp-sso §07/§09/§10/§11 portable set frozen **or** the exact
 not-yet-frozen ids listed as deferred with the modes they defer. Done: parity line by
 clause; the B1→parser pending list empty; every inherited clause has a frozen
 upstream or an `inherited` fixture, or its mode is deferred; the real input above
@@ -710,7 +714,7 @@ version, a migration path, a backup command, and a documented hard key rotation.
 | `feat(store): migrations, backup, restore` | #65 |
 | `test(e2e): machine client and upgrade` | the named real input |
 
-**Gates.** Start: M4 done; 03 phase 3 slice-locked; #67 and #65 ruled. Done: parity
+**Gates.** Start: M4 done; 03 phase 3 fixtures merged and read; #67 and #65 ruled. Done: parity
 line green on the whole portable set; every G6 row has a green fixture;
 `contract-v0-freeze` tag applied (#55).
 
@@ -813,13 +817,17 @@ through the published image following the recipe verbatim from a clean machine.
 - **Packet 10 — the mcp-sso lane.** The runner is done and in CI (`main` `63ed987`;
   4/4 on the two draft 8.4 fixtures across Fastify, Express, and Hono, zero skips,
   verified locally 2026-09-02); PR 340 is closed. What Atesaki still needs, in
-  order: (1) the 8.4 fixtures **frozen with receipts** — the runner passes them, the
-  freeze itself has not been recorded; (2) `MANIFEST.json` + `CATALOGUE.md` + the CI
-  hash gate, none of which exist yet (§19.9 requires the hash gate before the first
-  freeze); (3) the §08 verifier slice written and frozen (M3's input — today the
-  corpus is two fixtures); (4) §07/§09/§10/§11 fixtures labeled portable/host
-  against `deltas.md` including the new scope-ceiling row (M4's input). One session
-  a day on that lane through September is the cheapest schedule insurance there is.
+  order, and with **no freeze machinery** (the owner's standing rule — #30, #50): (1)
+  the two 8.4 fixtures flipped to `status: frozen` with the `receipt` object in the
+  file, one PR, since the runner already passes them; (2) the §08 verifier clauses
+  8.1–8.3 and the remaining 8.4 input classes, plus the §07 token clauses the verifier
+  delegates to, each fixture frozen in the PR where the reference passes it (M3's
+  input — today the corpus is two fixtures); (3) §09/§10/§11 fixtures labeled
+  portable/host against `deltas.md` including the new scope-ceiling row, then §17
+  identity (M4's input); (4) a one-line §19 edit removing `MANIFEST.json`,
+  `CATALOGUE.md`, and the hash gate from the text, since the status and receipt in
+  the file plus the freeze log are the whole record. One session a day on that lane
+  through September is the cheapest schedule insurance there is.
 - **Packet 16 — the client compatibility spike** runs before any authorization-server
   design is finalized and again before publish: what the real clients send and
   accept is evidence, and evidence has already overturned one ruling (#62).
@@ -862,7 +870,7 @@ without a proof is a finding.
 | 27 | Pairing code in logs | M4 | audit fixture: absent |
 | 28 | `validate --deep` "real read" against an MCP upstream is undefined (#59) | M3 | contract sentence + fixture before the verb ships |
 | 29 | A group removed after activation does not revoke the grant; refresh rechecks nothing | M2/M7 | threat-model residual; recipe: shorter `maxDuration`, `grants revoke` |
-| 30 | A hostile fixture revision is a file-write, chmod, or link primitive on every machine that runs the corpus | M3 | `os.Root` containment; manifest hash before materialization; hostile-path fixtures refused |
+| 30 | A hostile fixture revision is a file-write, chmod, or link primitive on every machine that runs the corpus | M3 | `os.Root` containment; hostile-path fixtures refused; fixture changes reviewed in the PR diff |
 | 31 | The inherited limiter fails open when it throws (#60) | M4 | delta row + fixture: `temporarily_unavailable` |
 | 32 | A readiness probe that includes upstream reachability takes a multi-route gateway out of the balancer when one backend flaps (#61) | M3/M7 | `readyz` semantics fixed by contract; recipe probes only those |
 | 33 | Two `Host` fields are refused by Go before the handler; no audit line exists for them | M3 | fixture pins `400`; the negative matrix row cites the parser |

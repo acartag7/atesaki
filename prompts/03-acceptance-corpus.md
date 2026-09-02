@@ -3,10 +3,10 @@ FALLBACK: grok-4.5
 MILESTONES: M2 (phases 0–1), M4 (phase 2), M5 (phase 3) — docs/roadmap.md.
 WHY: the tests a WRONG build fails. Atesaki's own fixture corpus, in the shared §19
 format, for everything mcp-sso's corpus does not cover. Fixtures for a slice are
-written and **slice-locked** before that slice's code (the slice lock, #55): their
-§19 status stays `draft` until the runner passes them; the lock is an owner-approved
-`fixtures/LOCK-<slice>.json` listing fixture hashes and the pinned contract SHAs;
-`frozen` needs a passing-runner receipt. They run red until the Go exists.
+written, merged, and read by the owner before that slice's code (#55): their §19
+status stays `draft` until the runner passes them and becomes `frozen` with the
+`receipt` object then — fields in the file, nothing else; no lock file, manifest,
+catalogue, or hash gate (#30, #50). They run red until the Go exists.
 
 RUN MODE: phases in order; a phase is several serial PRs, **one per invariant or
 protocol chain with all its fixtures** (a never, a G6 row family, a B-section's
@@ -51,17 +51,17 @@ The profile ships its own mutation suite: an mcp-sso-shaped config, an unknown c
 id, an unknown record field, an unknown reason code, a reason with the wrong class,
 a chain with a gap, a `given.files` path with `..`, an absolute path, a link target
 outside the root — each REJECTED, named. A contract artifact of THIS repo; the
-mcp-sso schema is never edited. `fixtures/MANIFEST.json` + `CATALOGUE.md` generation
-with clause-level coverage: every numbered clause / never / operation row in
+mcp-sso schema is never edited. Coverage is read from the fixture ids themselves
+(each carries the clause it pins) — no manifest, catalogue, or hash gate is built
+(#30, #50); every fixture PR lists, by hand, the clauses it covers among
 contract.md §4, §6, §9 (verbs), §12, contract-grants.md G1–G14 (each A/E row
-separately), contract-boundaries.md **B1–B8** (B1 rows point at the config refusal
-suite as `suite` evidence; every B8 number has a fixture that exercises its exact
-boundary), and every deltas.md row maps to ≥1 fixture id or is listed uncovered. A
-fixture may carry `inherited: <mcp-sso clause>` when it pins an inherited sentence
-that has no frozen upstream portable fixture yet; it is superseded when the upstream
-one freezes, and until then it is what makes "inherited" mean "tested". Hashes of
-`locked` fixtures; the runner (packet 05) verifies them before materializing anything
-and fails on a mismatch or a skip.
+separately), contract-boundaries.md B1–B8 (B1 rows and B8 numbers covered by the
+Go refusal suite and boundary tests, said so), and deltas.md rows, and the clauses
+still uncovered. A fixture may carry `inherited: <mcp-sso clause>` when it pins an
+inherited sentence that has no frozen upstream portable fixture yet; it is
+superseded when the upstream one freezes, and until then it is what makes
+"inherited" mean "tested". The runner (packet 05) runs every non-superseded
+fixture and fails on a skip.
 
 PHASE 1 — SLICE-1 FIXTURES (M3), `profile: portable`, sentinels only, every outbound
 call recorded:
@@ -98,9 +98,9 @@ call recorded:
    loopback refusals; every
    B1 refusal already covered by `internal/config/testdata` is NOT re-fixtured — the
    coverage map points at that suite as `suite` evidence.
-6. Every fixture `draft`; the slice lock written in one PR at the end of the phase
-   with the owner's read as the receipt (#55); `frozen` only after packet 05's runner
-   passes them.
+6. Every fixture `draft`; the owner reads and merges the phase's PRs before slice
+   1's code starts (#55); `frozen` with its `receipt` only after packet 05's runner
+   passes it.
 
 PHASE 2 — SLICE-2 FIXTURES (M4, the whole human loop): §4 rungs (each rung's boot
 refusals and acceptance; rung 4: duplicate assertion header, unsigned header, wrong
@@ -151,11 +151,12 @@ fixture and a fail-closed rule in conflict → the rule wins; record why.
 
 HARD RULES: one invariant or protocol chain per PR with all its fixtures; contract pages unchanged
 unless the owner accepts a proposal under `prompts/README.md`; no Go except the
-schema/manifest tooling if it is Go; nothing may depend on the machine running it;
+schema tooling if it is Go; no manifest, catalogue, lock, or hash tooling of any
+kind; nothing may depend on the machine running it;
 every fixture PR updates the rows it satisfies in `docs/negative-matrix.md` (packet 04).
 
-DONE WHEN (per phase): schema-valid fixtures; coverage map lists every uncovered
-clause explicitly; profile mutation suite green; the phase locked with its receipt.
+DONE WHEN (per phase): schema-valid fixtures; the uncovered clauses listed in the
+last PR of the phase; profile mutation suite green; the phase merged and read.
 
 REPORT: coverage counts per page and per phase; uncovered clauses; contract gaps
 (rows you could not fixture as written and why) — the most valuable output.

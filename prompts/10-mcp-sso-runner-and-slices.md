@@ -11,31 +11,36 @@ docs/verification-design.md · ~/project/atesaki-core/docs/deltas.md (the consum
 declared divergences — label, never pin against, D1/D2/D3/D4/D5/D6/D7/D11/D12/D13).
 STALE-STATE NOTE (2026-09-02, evening): #338 is MERGED at 09fb858. PR #340 is
 CLOSED — the runner landed on `main` as serial PRs (#374–#400; `main` at 63ed987
-"run the parity runner in CI"). Phases A–C are DONE on `main`: `pnpm test:parity`
-runs in CI and passes the two draft 8.4 fixtures through Fastify, Express, and Hono
-with zero skips (verified locally 2026-09-02). Phase D is NOT done: both 8.4
-fixtures are still `draft`, no receipt exists, and there is no `MANIFEST.json`,
-`CATALOGUE.md`, or hash-gate script — §19.9 requires the hash gate to exist before
-the first freeze. Start at D. Side finding for mcp-sso: three live-run script tests
+"run the parity runner in CI"). Phases A–C are DONE on `main` as far as the owner
+wants them: `pnpm test:parity` runs in CI and passes the two draft 8.4 fixtures
+through Fastify, Express, and Hono with zero skips (verified locally 2026-09-02).
+**The owner's standing rule: no freeze machinery.** Do NOT build `MANIFEST.json`,
+`CATALOGUE.md`, a hash gate, or any lock or accounting tool, even though §19.3–19.4
+and §19.9 still name them — propose instead a one-line §19 edit that removes them,
+leaving `status` + `receipt` in the fixture file, the freeze log, and the fixture
+directory as the whole record (the same triage as the 2026-08-31 §19 simplification).
+Phase D is what remains: both 8.4 fixtures are still `draft` with no `receipt`.
+Start at D. Side finding for mcp-sso: three live-run script tests
 (`live-evidence-scripts`, `live-run-script`, the symlinked live-state cases) fail on
 macOS with any temp dir and pass in Linux CI — a portability defect in the live
 run-support scripts, unrelated to parity. What Atesaki needs, in order
-(docs/roadmap.md §4): (1) the runner passes the portable 8.4 draft and it freezes
-with a receipt; (2) `MANIFEST.json` + `CATALOGUE.md` + the CI hash gate; (3) the §08
-verifier slice frozen — M3's cross-lane input; (4) §07/§09/§10/§11 fixtures labeled
-portable/host against `deltas.md` including the scope-ceiling row packet 14 adds
-(catalog refusal at §9.3 step 3 becomes host) — M4's input.
+(docs/roadmap.md §4): (1) both 8.4 fixtures flipped to `frozen` with their `receipt`
+in the file, one PR; (2) the §08 clauses 8.1–8.3, the remaining 8.4 input classes,
+and the §07 token clauses, each frozen in the PR where the reference passes it —
+M3's cross-lane input; (3) §09/§10/§11 fixtures labeled portable/host against
+`deltas.md` including the scope-ceiling row packet 14 adds (catalog refusal at §9.3
+step 3 becomes host), then §17 identity — M4's input; (4) the one-line §19 edit
+that drops the manifest, catalogue, and hash gate from the text.
 
 PHASE A — §19 simplification (contract PR): rewrite §19.4's coverage gate to **clause
-level** — `MANIFEST.json` lists, per numbered clause in §05–§17, the fixtures that pin
-it and the clauses with none; a fixture names its clause and quotes its sentence (the
-existing schema); drift = stale quote. Remove every mention of per-sentence anchors,
+level** — coverage is read from the fixture ids (each names its clause) and a fixture
+quotes its sentence (the existing schema); drift = stale quote; no manifest. Remove every mention of per-sentence anchors,
 the anchor grammar, the marker-word statement selector, and the fenced-block ban.
 Withdraw PR #339. Owner decision recorded on PR #338/#339 (2026-08-31, "§19
 simplification").
 
-PHASE B — evidence kinds (contract PR): MANIFEST evidence kinds `fixture`, `boot`,
-`suite` per the owner decision; the portable logical store vocabulary (§12 appendix or
+PHASE B — evidence kinds (contract PR): evidence kinds `fixture`, `boot`, `suite`
+per the owner decision, recorded in the fixture's own fields; the portable logical store vocabulary (§12 appendix or
 §19); `given.identity.checks` `result` | `throw {kind: oauth|generic}`; capture-and-
 validate token chains (`capture`, exact header/claims, signature verification under
 the corpus key); Fastify as canonical host + Express/Hono adapter-drift runs. Close the
@@ -44,11 +49,13 @@ unresolved P1 review thread with the `boot`/`suite` decision.
 PHASE C — the reference runner (TypeScript): per §19.1/19.2 — clock port, seedable
 randomness port (add narrowly if missing; production unchanged), corpus keys, recorded
 outbound HTTP only, real HTTP against the composed app, exact comparison including
-absence assertions and RE2 matchers; MANIFEST/CATALOGUE/FREEZE-LOG; CI: hash mismatch
-fails, skipped frozen fixture fails, host and portable counted separately.
+absence assertions and RE2 matchers; FREEZE-LOG only; CI: a skipped frozen fixture
+fails, host and portable counted separately. No manifest, catalogue, or hash gate.
 
-PHASE D — freeze 8.4: run it unchanged; freeze with receipt, or STOP with the §19.6
-report (bug vs contract gap). Never edit the fixture to match the code.
+PHASE D — freeze 8.4: the runner passes both 8.4 fixtures unchanged (verified); flip
+`status` to `frozen` and add the `receipt` object (implementation, version, commit,
+date) in each file, one PR, plus the FREEZE-LOG line. Never edit a fixture to match
+the code.
 
 PHASE E — slices, labeling every fixture portable/host: slice 1 §08 verifier + §09.1
 PRM/challenge (**only fixtures pinning the reference's exact origin-root challenge
@@ -68,8 +75,8 @@ duplicate occurrences); exact error/challenge shapes; fresh sentinel subjects.
 SCOPE FENCE: no corpus relocation, no Go, no product features, contract edits only in
 the dedicated phase-A/B PRs.
 
-DONE WHEN: A–D landed; slice 1 frozen; slice 2 drafted or better; MANIFEST names every
-uncovered clause with its profile; zero skipped frozen fixtures.
+DONE WHEN: A–D landed; slice 1 frozen; slice 2 drafted or better; the last PR of each
+slice lists the uncovered clauses by hand; zero skipped frozen fixtures.
 
 REPORT: frozen ids + receipts; drafts and why; portable vs host counts; contract gaps
 (most valuable); implementation bugs; the parity status line format Atesaki will

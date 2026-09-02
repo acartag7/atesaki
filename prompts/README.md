@@ -20,15 +20,15 @@ the security surface it opens, and the tests that prove it, is in `docs/roadmap.
  M2              14 contract closure — #62 consent-page carrier, #53 two-stage ceiling,
                     #5 live fetch, #56 knownCimd refs + config-file exception, #57
                     clientOriginIn, PR-5 interpretations + header-name rule, #58, #59,
-                    #55 slice-lock vocabulary, #60, #61, #63, #64, #65, #66, #67, B4 alg
+                    #55 per-slice fixtures without machinery, #60, #61, #63, #64, #65, #66, #67, B4 alg
                     wording, B8 note, matrix window
                  12 grants authority (waits on the #24 ruling; fixtures written in 03 phase 3)
                  03 phase 0 (fixture profile) then phase 1 (slice-1 fixtures)
                  04 threat model + negative matrix
                           │
-                 SLICE LOCK (#55): the slice's sections SHA-pinned in its packet, its
-                 fixtures' hashes in fixtures/LOCK-<slice>.json, the owner has read
-                 those pages; "freeze" is reserved for §19 frozen fixtures and the final tag
+                 PER SLICE (#55): the slice's sections SHA-pinned in its packet, its
+                 fixtures merged and read by the owner (the PR approval is the record);
+                 no lock file, manifest, catalogue, or hash gate — #30, #50, #52
                           │  strictly serial from here — no parallel dispatch:
  M3              05 Go slice 1 — runner + relay + verifier + validate --deep
                     (needs the frozen mcp-sso §8 verifier fixtures — cross-lane input;
@@ -72,12 +72,14 @@ the security surface it opens, and the tests that prove it, is in `docs/roadmap.
 - **No invented APIs.** Grep every external symbol against the actual dependency
   source before using it. Every new dependency: exact version, publish date, age
   against the cooldown, and why the standard library was not enough.
-- **Fixtures before code, per slice.** A slice's Atesaki fixtures are **slice-locked**
-  (an owner-approved `fixtures/LOCK-<slice>.json` with their hashes and the pinned
-  contract SHAs — §19 status stays `draft` until the runner passes them, and `frozen`
-  needs a runner receipt) before its first implementation PR. A skipped locked
-  fixture is a failure. Fixture phases for the next slice are written alongside the current
-  slice's code and locked before the next slice starts.
+- **Fixtures before code, per slice.** A slice's Atesaki fixtures are merged and
+  read by the owner before its first implementation PR; the PR approval is the
+  record. A fixture's `status` is `draft` until a runner passes it and `frozen`
+  with its `receipt` after — fields in the file, nothing else. No lock file,
+  manifest, catalogue, or hash gate (#30, #50): a fixture edited inside an
+  implementation PR is a review-checkpoint finding (#52). A skipped fixture is a
+  failure. Fixture phases for the next slice are written alongside the current
+  slice's code and merged before the next slice starts.
 - **Packets cite, they do not legislate.** A packet names the row, the artifact to
   produce, and the proof to run. Where a packet paraphrases a rule, the contract's
   sentence wins; a paraphrase that disagrees with it is a bug in the packet.

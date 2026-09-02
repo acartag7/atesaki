@@ -338,12 +338,17 @@ suites, fixtures, packet-11 code reviews) plus Arnold's own read at freeze.
 55. **One freeze or a rolling one.** README already says product code is built slice
     by slice against the draft (PR 5); `prompts/README.md`, `quality-bar.md`, and
     packets 05–07 still gate every line of Go on a single `contract-v0-freeze` tag.
-    **Proposal:** freeze per slice — when a slice starts, the sections it implements
-    are SHA-pinned in its packet, their Atesaki fixtures slice-locked, and the mcp-sso
-    citations for those sections pinned; the owner reads those pages, not the whole
-    set; `contract-v0-freeze` is applied when the whole portable set is green (end of
-    slice 3). The "slices before freeze" decision already taken by merging PR 5 gets a
-    ledger row with that receipt. Arnold decides.
+    **Proposal:** per slice, with no machinery (#30, #50, #52): when a slice starts,
+    the sections it implements are SHA-pinned in its packet, its Atesaki fixtures are
+    merged and the owner has read them (the PR approval is the record), and the
+    mcp-sso citations for those sections are pinned; a fixture carries only what §19
+    already puts in the file — `status` (`draft`, then `frozen` with its `receipt`
+    once a runner passes it) and the clause it pins; no lock file, manifest,
+    catalogue, or hash gate; a fixture edited inside an implementation PR is a
+    review-checkpoint finding the diff shows. `contract-v0-freeze` is one git tag
+    when the whole portable set is green (end of slice 3). The "slices before freeze"
+    decision already taken by merging PR 5 gets a ledger row with that receipt.
+    Arnold decides.
 56. **B2 file rules on Kubernetes.** With today's default volume behavior, Secret and
     ConfigMap mounts are symlinks into a root-owned directory and `subPath` mounts are
     root-owned regular files (Kubernetes 1.37 adds an alpha, off-by-default feature

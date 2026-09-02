@@ -41,7 +41,7 @@ PHASE 1 — `test(config): B1 to parser drift check`
 - Compare both directions; print both diffs. The parser→B1 direction **fails** (an
   undocumented accepted field is a defect). The B1→parser direction is a **pending
   list**: printed on every run, allowed to be non-empty while a contract-first PR
-  has added a field the code does not read yet and through a slice lock, and
+  has added a field the code does not read yet and while a slice's fixtures are merged ahead of its code, and
   required empty at each slice's completion (the slice's first, fixture-driven
   configuration PR closes it) — the test takes the list of currently accepted gaps
   from `internal/config/testdata/pending-b1.txt`, which the slice-completion review

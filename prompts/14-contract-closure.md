@@ -101,9 +101,12 @@ in one sitting may share one PR when they touch different sentences.
    to B8).
 7. `docs(contract): what validate --deep sends to an upstream` (#59, as ruled) —
    the verb reports "transport path reachable", never "the backend works".
-8. `docs: per-slice freeze` (#55) — quality-bar.md "Order of work" and the packet
-   preconditions say: sections SHA-pinned in the slice packet, fixtures hash-locked,
-   owner has read those pages; `contract-v0-freeze` applied when the whole portable
+8. `docs: per-slice fixtures, no machinery` (#55) — quality-bar.md "Order of
+   work" and the packet preconditions say: sections SHA-pinned in the slice packet;
+   the slice's fixtures merged and read by the owner before its code, the PR
+   approval being the record; §19 status `draft` until a runner passes a fixture,
+   `frozen` with its `receipt` after; no lock file, manifest, catalogue, or hash
+   gate (#30, #50, #52); `contract-v0-freeze` one git tag when the whole portable
    set is green. Ledger row. README status line updated.
 9. `docs(contract): B8 configurability` — resolve the flagged B8 note per the ruling.
 10. `docs(contract): the client-matrix staleness window` — §14 gains the number (B8

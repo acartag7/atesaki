@@ -1,15 +1,14 @@
 MODEL: grok-4.5   EFFORT: high   FALLBACK: gpt-5.6-terra   TOOL: Codex CLI or pi, fresh clone
 MILESTONE: M4 (docs/roadmap.md). PRECONDITION (#55): slice 1 merged (its runner
-already executes the mcp-sso §8 portable subset); packet 03 phase 2 fixtures
-slice-locked; packet 12 landed (#24 as ruled); packet 14 landed (#62, #53, #5, #56,
-#57, #58, #60, #64, #66 as ruled); the mcp-sso corpus pinned at an
-exact commit + `MANIFEST.json` hash, and the **exact frozen portable fixture-id set**
+already executes the mcp-sso §8 portable subset); packet 03 phase 2 fixtures merged
+and read by the owner; packet 12 landed (#24 as ruled); packet 14 landed (#62, #53,
+#5, #56, #57, #58, #60, #64, #66 as ruled); the mcp-sso corpus pinned at an exact
+commit, and the **exact frozen portable fixture-id set**
 this build will pass listed in the PR before any code — acceptance is by ID, not
 section name; every frozen portable id this slice does not yet pass is listed as
 deferred with its reason (the lane may lag; nothing is skipped silently).
 PINNED: contract.md @ <sha> · contract-grants.md @ <sha> · contract-boundaries.md @
-<sha> · deltas.md @ <sha> · fixtures/MANIFEST.json @ <sha> · mcp-sso corpus <version>
-@ <sha>.
+<sha> · deltas.md @ <sha> · fixtures/ @ <sha> · mcp-sso corpus @ <commit sha>.
 WHY: the first real sign-in, and the whole human loop: under the default policy
 everything escalates, so a slice without approvals ends every default flow in a dead
 end; this slice ships allow, escalate, approve, claim, consent, exchange, rotation,
@@ -159,8 +158,7 @@ SCOPE — serial PRs, one invariant or chain each, in this order:
 
 HARD RULES: as prompts/README.md. Every place Atesaki deviates from an mcp-sso clause
 MUST correspond to a row in docs/deltas.md — a deviation without a row is a bug, stop
-and report. Never edit a frozen fixture. Pin the corpus version and manifest hash in
-the PR. A predicate that cannot be evaluated where G6 puts it (preflight vs in-tx) is
+and report. Never edit a frozen fixture. Pin the corpus commit in the PR. A predicate that cannot be evaluated where G6 puts it (preflight vs in-tx) is
 a contract gap — report, do not move it. Never weaken CAS or atomicity to pass a
 fixture. Rate limits per client IP after B6 on register, authorize, token, approve,
 revoke with the B8 budgets; limiter failure per #60 as ruled — never fail open on a

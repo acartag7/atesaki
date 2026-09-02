@@ -1,9 +1,9 @@
 MODEL: grok-4.5   EFFORT: high   FALLBACK: gpt-5.6-terra   TOOL: Codex CLI or pi, fresh clone
 MILESTONE: M5 (docs/roadmap.md). PRECONDITION (#55): slices 1–2 merged (the whole
-human loop and the grants CLI exist); packet 03 phase 3 fixtures slice-locked; #67
+human loop and the grants CLI exist); packet 03 phase 3 fixtures merged and read; #67
 (machine clients in v0 or v0.1) and #65 (upgrade path) ruled and landed.
 PINNED: contract-grants.md @ <sha> · contract-boundaries.md @ <sha> · deltas.md @
-<sha> · fixtures/MANIFEST.json @ <sha>.
+<sha> · fixtures/ @ <sha>.
 WHY: machines and clocks — the rows with no human in them — plus the upgrade path
 nobody can ship without. Implement the remaining operation-table rows literally on
 the store and discipline slice 2 proved.

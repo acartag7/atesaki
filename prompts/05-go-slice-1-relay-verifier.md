@@ -1,13 +1,13 @@
 MODEL: grok-4.5   EFFORT: high   FALLBACK: gpt-5.6-terra   TOOL: Codex CLI or pi, in a fresh clone of ~/project/atesaki-core
-MILESTONE: M3 (docs/roadmap.md). PRECONDITION (the slice lock, #55): the sections
-below are SHA-pinned in this packet's header by the owner; packet 03 phase 1 fixtures
-slice-locked (`fixtures/LOCK-slice-1.json`; §19 status `draft` until this runner
-passes them); **mcp-sso's §8 verifier fixtures frozen with receipts** — the one
+MILESTONE: M3 (docs/roadmap.md). PRECONDITION (#55): the sections below are
+SHA-pinned in this packet's header by the owner; packet 03 phase 1 fixtures merged
+and read by the owner (§19 status `draft` until this runner passes them); **mcp-sso's
+§8 verifier fixtures `frozen` in their files with the `receipt` object** — the one
 cross-lane input: this slice's verifier is inherited §07/§08 behavior, proven against
 the shared corpus, never re-authored here.
 PINNED: contract.md @ <sha> · contract-boundaries.md @ <sha> · contract-grants.md @
-<sha> (G1 `resource`, G9, G12 only) · deltas.md @ <sha> · fixtures/LOCK-slice-1.json
-@ <sha> · mcp-sso corpus <version> @ <sha> + its MANIFEST.json hash. BLOCKING
+<sha> (G1 `resource`, G9, G12 only) · deltas.md @ <sha> · fixtures/ @ <sha> ·
+mcp-sso corpus @ <commit sha>. BLOCKING
 RULINGS: #55, #59, #61, #63 (with values), and the JOSE library choice.
 WHY: the first things that run — the Atesaki fixture RUNNER, then relay + verifier +
 `validate --deep`, proven against it. Beyond the frozen §8 set it depends on NO
@@ -22,9 +22,9 @@ order, the gotcha register rows 11–19, 24, 28) · prompts/README.md convention
 docs/open-questions.md #59 as ruled.
 
 SCOPE — serial PRs, one invariant or protocol chain each, in this order (merge before the next):
-1. `feat(runner): load and validate Atesaki fixtures` — verifies
-   `fixtures/LOCK-<slice>.json` before running any slice-locked draft and
-   `MANIFEST.json` for frozen fixtures, both before touching the disk; loads a fixture in the Atesaki profile; validates
+1. `feat(runner): load and validate Atesaki fixtures` — runs every non-superseded
+   fixture and reports by `status`; no manifest, lock, or hash to verify (#30, #50);
+   loads a fixture in the Atesaki profile; validates
    `given.config` with the real parser; materializes `given.files` under `os.Root` in
    a fresh temp root per fixture, enforcing the profile's containment grammar
    (relative paths, no `..`, link targets inside the root, modes, count and byte
@@ -34,8 +34,8 @@ SCOPE — serial PRs, one invariant or protocol chain each, in this order (merge
    `fixtures/keys`, recorded outbound HTTP only (an unrecorded call fails the fixture);
    chains and captures; exact comparison — status, headers (RE2 where stated),
    body, `then.events` by reason and class, `then.state` over the logical records
-   (packet 02 phase 2 projection); absence assertions; hash check against
-   `fixtures/MANIFEST.json`; a skipped locked fixture is a failure; zero expectations
+   (packet 02 phase 2 projection); absence assertions; a skipped fixture is a
+   failure; zero expectations
    of its own. It also runs the frozen mcp-sso portable §8 fixtures (numeric-clause
    subset, same spine) — that run is how the verifier is proven. A test fails if any
    package outside the randomness port imports `crypto/rand`.
@@ -125,7 +125,7 @@ review checkpoint in `prompts/README.md`; a gap is a PR comment, then continue; 
 closed on every ambiguity; no `value || default` on a security selector; `O_NOFOLLOW`
 opens; explicit directory modes; `umask 077` at boot.
 
-VERIFY: the Atesaki runner green on every slice-locked slice-1 fixture, zero skips,
+VERIFY: the Atesaki runner green on every slice-1 fixture, zero skips,
 and green on the frozen mcp-sso §8 portable set; the exhaustion tests end at the #63
 bounds; shutdown under live streams ends at the bound; `serve` in front of a real local MCP
 server (any stdio→HTTP server you can run — name it and its version) with a
