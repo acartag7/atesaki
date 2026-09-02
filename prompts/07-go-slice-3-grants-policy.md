@@ -1,56 +1,63 @@
 MODEL: grok-4.5   EFFORT: high   FALLBACK: gpt-5.6-terra   TOOL: Codex CLI or pi, fresh clone
-PRECONDITION: slices 1–2 merged; Atesaki grant fixtures (prompts/03 §4) locked; the
-**#24 grants-authority contract packet is owner-approved and landed** — this packet
-decides nothing about CLI authority.
-WHY: the core promise — credentials are dispensed, not configured. Implement the
-operation table literally.
+MILESTONE: M5 (docs/roadmap.md). PRECONDITION (#55): slices 1–2 merged (the whole
+human loop and the grants CLI exist); packet 03 phase 3 fixtures merged and read; #67
+(machine clients in v0 or v0.1) and #65 (upgrade path) ruled and landed.
+PINNED: contract-grants.md @ <sha> · contract-boundaries.md @ <sha> · deltas.md @
+<sha> · fixtures/ @ <sha>.
+WHY: machines and clocks — the rows with no human in them — plus the upgrade path
+nobody can ship without. Implement the remaining operation-table rows literally on
+the store and discipline slice 2 proved.
 
-Read first, fully: docs/contract-grants.md (every line; G6 is the specification) ·
-docs/contract-boundaries.md B5, B7, B8 · schema/records/** · docs/deltas.md D2–D13 ·
-fixtures/** for G6 rows and nevers 8–9 · docs/decisions.md (why each rule is the way
-it is — do not relitigate).
+Read first, fully: docs/contract-grants.md (every line; G6 is the specification; this
+slice's rows: A12, A13 if kept, A14 sweeper, A15) · docs/contract-boundaries.md B2
+(the backup file), B5, B7, B8 · schema/records/** · docs/deltas.md D2, D10a, D10b,
+D10c · fixtures/** phase 3 · docs/negative-matrix.md rows tagged slice 3 ·
+docs/roadmap.md §M5 · docs/open-questions.md #65, #67 as ruled · docs/decisions.md
+(do not relitigate).
 
-SCOPE — build exactly this:
-- **Store port** (Go interface) + **SQLite adapter** (pure-Go driver; name it, version,
-  publish date) + the memory adapter from slice 2; a **store conformance suite** run
-  against both adapters (§12-style tables: atomicity of each G6 row, CAS semantics,
-  uniqueness, ordering-free comparison); `serve` refuses the memory adapter.
-- The **operation table** A1–A15 including A3′, A3″, A6a, A6b, A9′, A10′, A10″,
-  E1–E3: two-phase
-  discipline (preflight outside the store; one transaction with only authoritative
-  reads, CAS predicates, mutations, durable events); sign-before-commit; response after
-  commit; lazy expiry + sweeper. One store transaction per A-row; E-rows have none.
-- Hashes and digests exactly per G3 (RFC 8785 canonical JSON, domain-separation
-  prefixes, sorted scope sets, purpose as hex).
-- **Policy** (G7): built-in per-route rules, AND-only vocabulary, deny overrides allow,
-  escalate by default, purpose never readable by rules, `policy_version` digest, boot
-  contradiction check for machine declarations, outage → `temporarily_unavailable`.
-- **Machine clients** (G10): `client_credentials`, declared clients, per-route digest,
-  deny-only rules, sticky tombstone, one active grant per (client, route), token
-  identity profile (D10b).
-- **Audit** (G12): durable `grant_event` rows committed with each transaction; JSONL
-  fan-out from the outbox best-effort with a loss counter; flow events direct.
-- **CLI** `grants list|pending|approve|deny|revoke` per the landed #24 contract —
-  nothing about authority is decided here.
-- Onboarding flow end-to-end: agent sends `purpose`/`requested_duration`; consent page
-  shows exactly the committed values; escalation → `approval_pending` + `request_id`;
-  approver narrows; re-run claims once; bounded revocation observable.
+SCOPE — serial PRs, one invariant each, in this order:
+1. `feat(grants): machine clients A12, A13` (only if #67 keeps them) — `client_credentials` per the inherited
+   token grammar and client authentication (timing-safe); declaration lookup per
+   (client, route); requested ⊆ declared; deny-only rules; tombstone check on the
+   current `declaration_digest` (G3); reuse of the active grant only on digest match
+   and before expiry; the first-issuance race: a losing insert on the one-active-per-
+   (client, resource) uniqueness rolls back, discards its signed token, retries once
+   as reuse; D10b claims; A13 tombstone on revoke (state `active` or `expired`).
+2. `feat(grants): sweeper and retention A14, A15` — 60 s interval (B8) over every
+   row kind; the lazy path exists since slice 2 and is extended to every operation
+   this slice adds; exactly one event per expiry;
+   retention purge after 30 days (B8), idempotent, a `grant` only after its codes
+   and family expired; `grant_event` rows never purged; flow `retention_purged` with
+   count and oldest terminal timestamp.
+3. `feat(store): credential epoch, migrations, backup, restore` — #65 as ruled:
+   grants, refresh families, and codes carry the credential epoch (the signing key's
+   fingerprint); rotation and restore advance it; a mismatched epoch refuses with
+   `invalid_grant`; a negative test proves a pre-rotation code and refresh token
+   cannot mint under the new key; the migration framework present since slice 2
+   gains its first real migration test (a crash mid-migration leaves the old schema
+   intact); `atesaki backup <path>` via SQLite's online backup under B2 file rules;
+   restore tested on a real cluster; hard key rotation documented as replace,
+   restart, every credential dies. The upgrade fixture is a real schema-v1 database
+   created by the pinned slice-2 commit's binary, archived with its checksum — no
+   earlier release tag exists.
+4. `test(e2e): machine client and upgrade` — the named real input (below).
 
 HARD RULES: as prompts/README.md. A predicate that cannot be evaluated where G6 puts
-it (preflight vs in-tx) is a contract gap — report, do not move it silently. Never
-weaken CAS or atomicity to pass a fixture.
+it is a contract gap — report, do not move it silently. Never weaken CAS or
+atomicity to pass a fixture. Nothing about authority beyond packet 12's words.
 
-VERIFY: all grant fixtures green, zero skips (A3″ both-caps refusal and A15 purge
-verified by fixture id); the two-runner claim race driven by a **deterministic
-barrier** — both runners held at the CAS and released together, so the collision is
-constructed, not hoped for (repetition alone proves nothing); never-8 and never-9 matrices green; the store
-conformance suite green on both adapters; crashes injected at **named failpoints** — between preflight and commit, and between
-commit and response — for A8 and A9, each followed by restart and exact state
-assertions (nothing consumed/nothing issued, or committed-with-E1); a real end-to-end escalation with a real MCP
-client: request → pending → `grants approve` → re-run → tool call → `grants revoke`
-→ refresh refused, access dies at TTL.
+VERIFY: all phase-3 fixtures green, zero skips (A15 purge by fixture id); the
+machine first-issuance race if kept; the store conformance suite green on both
+adapters for every row; crashes at named failpoints around A12 and mid-migration
+with restart and exact state assertions; a machine client via `client_credentials`
+on a route with a deny rule, refused, then allowed on another route, then tombstoned
+by `grants revoke` and refused after restart (if kept); an upgrade from the previous
+tag and a restore from backup on a real cluster (named).
 
-DONE WHEN: above verified and named; implementation checks green; PR opened.
+DONE WHEN: above verified and named; the parity line green on the whole frozen
+portable set; every G6 row has a green fixture; packet-11 review clean; the owner
+applies `contract-v0-freeze` (#55).
 
 REPORT: fixtures by id; crash-test and race-test outputs; every contract gap; every
-operation-table cell you could not implement as written.
+operation-table cell you could not implement as written; the upgrade and restore
+transcript.

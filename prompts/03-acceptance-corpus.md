@@ -1,73 +1,162 @@
 MODEL: gpt-5.6-sol   EFFORT: xhigh   TOOL: Codex CLI in ~/project/atesaki-core
 FALLBACK: grok-4.5
+MILESTONES: M2 (phases 0–1), M4 (phase 2), M5 (phase 3) — docs/roadmap.md.
 WHY: the tests a WRONG build fails. Atesaki's own fixture corpus, in the shared §19
-format, for everything mcp-sso's corpus does not cover. Each focused fixture PR is
-owner-reviewed before merge; the fixtures may run red until Go exists.
+format, for everything mcp-sso's corpus does not cover. Fixtures for a slice are
+written, merged, and read by the owner before that slice's code (#55): their §19
+status stays `draft` until the runner passes them and becomes `frozen` with the
+`receipt` object then — fields in the file, nothing else; no lock file, manifest,
+catalogue, or hash gate (#30, #50). They run red until the Go exists.
+
+RUN MODE: phases in order; a phase is several serial PRs, **one per invariant or
+protocol chain with all its fixtures** (a never, a G6 row family, a B-section's
+grammar, a delta row) — never one fixture per PR. On each run: fetch `origin/main`,
+find the first incomplete phase, do the next reviewable unit, open one PR, stop. Later phases never start before the slice that consumes the
+earlier phase has begun (phase 2 waits for M3 to start; phase 3 for M4).
 
 Read first, fully: ~/project/mcp-sso/docs/contracts/19-parity-fixture-protocol.md and
-fixtures/schema/fixture.schema.json (the format, incl. `profile`, seeded randomness,
-absence assertions, RE2 matchers, `boot` and `suite` evidence kinds) · docs/contract.md
-§6, §12 (nevers 1–9) · docs/contract-grants.md G5, G6 (every row), G14 ·
-docs/contract-boundaries.md B3–B7 · docs/deltas.md · docs/threat-model.md.
+fixtures/schema/fixture.schema.json (the spine: `given`/`when`/`then`, seeded
+randomness stream, `{absent: true}`, RE2 matchers, `boot` kind, chains and captures,
+`profile`) · docs/contract.md §4, §6, §9, §12 (nevers 1–9) · docs/contract-grants.md
+G4, G5, G6 (every row), G14 · docs/contract-boundaries.md B2–B7 · docs/deltas.md
+(every row, the ones packet 14 added included) · docs/threat-model.md ·
+schema/records/** (packet 02 phase 2) · docs/roadmap.md §M2–§M5 test tables.
 
-DELIVERABLE 0 — THE ATESAKI FIXTURE-FORMAT PROFILE (blocking prerequisite: the shared
-mcp-sso schema cannot encode Atesaki — it admits only numeric §-clauses, mcp-sso's
-BridgeConfig, and mcp-sso record kinds). Author
-`fixtures/schema/atesaki-fixture.schema.json` as a derived profile of the mcp-sso
-schema (same given/when/then spine, seeded-randomness stream, RE2 matchers, boot/suite
-kinds) additionally accepting: clause ids in the G/B/D/never grammars (`G6.A12`, `B3`,
-`never-8`); `given.config` as the Atesaki YAML stream validated against
-`schema/atesaki-config.schema.json` (packet 02); `given.state`/`then.state` over the
-Atesaki logical records (`schema/records/*`); `then.events` over the B7 reason set with
-its D/F class; a **filesystem materialization** input (`given.files`: paths, modes,
-owners, symlink/hardlink flags) so B2's runtime rules are fixturable as `boot` kind.
-The profile ships its own **mutation suite** — invalid clause ids, records, events,
-and mcp-sso-shaped configs must be REJECTED, each named. A contract artifact of THIS
-repo; the mcp-sso schema is never edited.
+PHASE 0 — THE ATESAKI FIXTURE PROFILE (blocking prerequisite; the mcp-sso schema
+admits only numeric §-clauses, mcp-sso's BridgeConfig, and mcp-sso record kinds).
+`fixtures/schema/atesaki-fixture.schema.json`, derived from the mcp-sso schema with
+the same spine, additionally accepting:
+- clause ids in the G/B/D/never grammars (`G6.A12`, `B3`, `never-8`, `D1`) and the
+  §-clauses of mcp-sso where a fixture pins an inherited rule;
+- `given.config` as the Atesaki YAML stream, as a string — the Go runner validates it
+  with the real parser (no config JSON Schema exists, #54); `given.env` for `env:`
+  references (sentinels); `given.files` for B2 boot fixtures under a **containment
+  contract** written into the schema: paths are relative, one segment grammar, no
+  `.`/`..`/absolute/empty segments; symlink and hard-link targets must resolve inside
+  the materialization root; modes as octal strings; sizes bounded (per-file and total
+  byte caps, file-count cap); **no ownership simulation** (`owner: other` is not
+  expressible — the owner-mismatch rule is proven by a Go unit test with an injected
+  stat, recorded as `suite` evidence); the runner materializes under `os.Root` and
+  refuses any fixture that violates the grammar before touching the disk (the corpus
+  is supply-chain input; a hostile fixture must not become a file-write primitive);
+- `given.state`/`then.state` over the Atesaki logical records validated against
+  `schema/records/*` plus the inherited mcp-sso records;
+- `then.events` over the B7 reason set with its D/F class; durable events also appear
+  in `then.state` as `grant_event` rows;
+- `given.clients` for CIMD documents the fixture vendors; `given.mockIdp` scripts
+  for the identity leg (id_token claims, JWKS) where the inherited `identity.checks`
+  form does not fit a redirect flow — prefer the inherited form; add only what is
+  needed, and say why.
+The profile ships its own mutation suite: an mcp-sso-shaped config, an unknown clause
+id, an unknown record field, an unknown reason code, a reason with the wrong class,
+a chain with a gap, a `given.files` path with `..`, an absolute path, a link target
+outside the root — each REJECTED, named. A contract artifact of THIS repo; the
+mcp-sso schema is never edited. Coverage is read from the fixture ids themselves
+(each carries the clause it pins) — no manifest, catalogue, or hash gate is built
+(#30, #50); every fixture PR lists, by hand, the clauses it covers among
+contract.md §4, §6, §9 (verbs), §12, contract-grants.md G1–G14 (each A/E row
+separately), contract-boundaries.md B1–B8 (B1 rows and B8 numbers covered by the
+Go refusal suite and boundary tests, said so), and deltas.md rows, and the clauses
+still uncovered. A fixture may carry `inherited: <mcp-sso clause>` when it pins an
+inherited sentence that has no frozen upstream portable fixture yet; it is
+superseded when the upstream one freezes, and until then it is what makes
+"inherited" mean "tested". The runner (packet 05) runs every non-superseded
+fixture and fails on a skip.
 
-DELIVERABLES — `fixtures/` in this repo, `profile: portable`, one fixture per clause
-instance, chains for flows, sentinels only, every outbound call recorded:
-1. **Nevers 1–9** (contract.md §12): the matrices as written — never 8 across purpose
-   shape × duration shape × boundaries × caps × races; never 9 as three independent
-   scope mutants plus lineage, asserted on the real JWT `scope` claim; never 3 asserting
-   exactly `502 upstream_auth_failed`, no `WWW-Authenticate`, allowlisted headers only;
-   never 5 with a REAL token minted for route A presented at route B.
-2. **Relay rules** (§6): each bullet; upstream stub answering 401/403 with a challenge;
-   header allowlists both directions (a new header must be dropped); SSE streamed
-   unbuffered; absolute-form target with mismatched authority → 400; top-level JSON
-   array → refused.
-3. **Ladder rungs** (§4): each rung's boot refusals and acceptance; rung 4 signed
-   assertion — duplicate header, unsigned header, wrong `kid`, stale JWKS beyond the
-   interval, identity headers stripped on non-identity paths.
-4. **Operation table** (G6): one fixture per row and per named failure branch, as
-   `boot`/HTTP/`suite` kinds as appropriate; A6 two-runner claim race; A6b freshness
-   failure → invalidated; A12/A13/A14 machine issue/revoke/expire races including the
-   per-route digest rule; A9′ consumption semantics (consumed on binding failure, not on
-   wrong resource); A10′ replay revokes grant and family. Every durable event reason
-   in B7 must be produced by at least one fixture; every G5 state reached.
-5. **Boundaries**: B3 host grammar accept/refuse pairs; B6 forwarded-IP walk
-   (trusted/untrusted peers, hop cap, malformed entry → 400); B7 every public error
-   row reached at least once with its exact status and code.
-6. `fixtures/MANIFEST.json` + `CATALOGUE.md` (generated) with **clause-level** coverage
-   (the §19 simplification applies here too): every numbered clause / never / operation
-   row in contract.md §6/§12, contract-grants.md G1–G14 (each A/E row separately,
-   incl. A3″ and A15), contract-boundaries.md B2–B7, and **every deltas.md row D1–D13**
-   maps to ≥1 fixture id or is listed as uncovered. Sentence quotes stay drift checks, never coverage units.
+PHASE 1 — SLICE-1 FIXTURES (M3), `profile: portable`, sentinels only, every outbound
+call recorded:
+1. Nevers 1, 3, 5, 7: never 1 with the upstream stub recording every received header
+   and the client's bearer absent from all of them; never 3 asserting exactly `502`
+   `upstream_auth_failed`, `WWW-Authenticate` absent, only B7-allowlisted response
+   headers; never 5 with a REAL token minted under `given.keys` for route A presented
+   at route B, expecting B's challenge; never 7 as the runner's own skip test.
+2. Relay rules §6, each bullet: header allowlists both directions (a new header must
+   be dropped); upstream 401/403 with a challenge; SSE streamed unbuffered with a
+   client disconnect cancelling the upstream; buffered POST completing (the cancel
+   binding regression); query-only passthrough; top-level JSON array refused;
+   `Transfer-Encoding: chunked` beside `Content-Length` → the observable Go's parser
+   produces (chunked honored, length dropped) — pinned, not wished away.
+3. Boundaries: B3 host grammar accept/refuse pairs; inbound target — absolute-form
+   with mismatched authority → `400`, encoded separators not routed, double-encoding
+   not routed, dot segments not routed; B5 caps (`413`, `414`, `431`, `429` with
+   `Retry-After`); B6 forwarded walk (trusted/untrusted peer, hop cap, malformed entry
+   → `400`, duplicate HTTP/1.1 `Host` → `400` — refused by Go's parser before any
+   handler, so the fixture asserts the status and **no** audit event, and the
+   negative-matrix row cites the parser; HTTP/2 `Host` beside `:authority` with a
+   different value → `400`); header count over B8 → `431`; B7 every row the relay
+   side reaches, exact status and code.
+4. Verifier and discovery: per-route PRM at the path-inserted location and the
+   challenge pointing at it (D1); origin AS metadata documents; `iss`/`aud`/`exp`/
+   `scope` refusals with the non-oracular shape; `alg` in the token ≠ the configured
+   algorithm, or a key of the wrong type → refused; duplicate `Authorization` (the
+   §8.4 portable fixture stays mcp-sso's — do not duplicate it; cite its id); an
+   `inherited` fixture for every §7 token clause the verifier implements that has no
+   frozen upstream fixture; `livez`/`readyz` and the drain per #61 as ruled.
+5. `boot` kind: B2 file invariants via `given.files` (symlink, hard link,
+   group-readable, group-writable parent, oversize — never wrong owner, which the
+   profile cannot express and the injected-stat Go suite receipt covers); console
+   loopback refusals; every
+   B1 refusal already covered by `internal/config/testdata` is NOT re-fixtured — the
+   coverage map points at that suite as `suite` evidence.
+6. Every fixture `draft`; the owner reads and merges the phase's PRs before slice
+   1's code starts (#55); `frozen` with its `receipt` only after packet 05's runner
+   passes it.
 
-SLICE OWNERSHIP: never 6 (redirect identity) belongs to slice 2's fixture-ID set,
-not slice 1's.
+PHASE 2 — SLICE-2 FIXTURES (M4, the whole human loop): §4 rungs (each rung's boot
+refusals and acceptance; rung 4: duplicate assertion header, unsigned header, wrong
+`kid`, stale JWKS beyond the interval, identity headers stripped on non-identity
+paths, bounded refetch #58); never 6 (dedicated rung whose IdP rejects the redirect:
+the IdP error surfaces, no fallback); the slice-2 configuration fields (`boot`
+fixtures the old parser must fail: `clients.cimd.liveFetch`, `clientOriginIn`, the
+approver objects, `knownCimd` references, forbidden credential header names, the
+inherited §10 redirect-entry grammar); the consent-page carrier (#62): purpose and
+duration POSTed with the consent, absent from every URL and flow line, hostile
+purpose (HTML, Unicode, control characters, over cap) refused or escaped per the
+inherited page controls, policy evaluated on the submitted values; the two-stage
+ceiling (#53: catalog empty → `invalid_scope`; group ceiling empty → `access_denied`
+inherited; the Codex-shaped union request on two routes);
+`clientOriginIn` (#57); live CIMD fetch if #5 allowed: origin not on the allowlist
+refused before any network call, the inherited caps cited by clause; the limiter-
+outage delta (#60); D1, D3, D4, D5's allow branch, D6, D7, D11, D12, D13; operation
+rows A1, A2, A3 (insert), A3′, A3″, A7, A8, A9, A9′ (consumed on binding failure, not
+on wrong `resource`), A10, A10′ (replay revokes grant and family), A10″, A11 via RFC
+7009, A4, A5, A6, A6a (two-runner barrier as a `suite` receipt), A6b (one
+transaction, #66), the packet-12 authority rules as **suite receipts** with an
+injected effective-identity port (the profile has no command carrier: unauthorized
+uid refused per verb; self-approval refused where checkable; `claimed_approver`
+never authority), the #62 state machine (C1 `entry` POST → deny / allow / escalate
+/ claim; C2 `confirm` POST → A7/A8; a C1 replay refused; a C2 presented at the
+entry stage refused), A14's lazy transitions inside A3's cap/dedupe
+read and inside A6/A9/A10, E1–E3; the projector cursor (#64: a durable event reaches
+JSONL after a sink failure and a restart); never 8 and never 9 as the matrices
+written in §12 (purpose shape × duration shape × boundaries × caps × races; three
+scope mutants plus lineage on the real JWT `scope` claim); the A10 crash pair (commit
+then lost response; the client's retry ends the grant);
+identity-failure pairs per §19.2 (rejection vs port throw) for every identity path;
+Entra groups overage → the inherited identity refusal with its reason, no outbound
+call; a display name as a `groupsToScopes` key → boot refusal; an `inherited` fixture
+for every §17 identity clause this slice implements that has no frozen upstream
+fixture.
 
-HOSTILE-CONSTRUCTION RULES (holes.md classes): build the person the title names; real
-foreign ids on every id-taking action; exact refusal, never "any 4xx"; never catch the
-fixture's own failure; fresh sentinel subjects per fixture; garbage is refusal, never a
-save. A fixture and a fail-closed rule in conflict → the rule wins; record why.
+PHASE 3 — SLICE-3 FIXTURES (M5): A12 (first-issuance race, reuse, digest mismatch,
+tombstone, deny rule, scope outside declaration) and A13 if #67 keeps machine
+clients; A14 sweeper; A15 purge idempotence; the migration and downgrade-refusal
+`boot` fixtures (#65); every durable reason in B7 produced by at least one fixture;
+every G5 state reached.
 
-HARD RULES: one self-explanatory fixture behavior per PR; contract pages unchanged
-unless the owner accepts a proposal under `prompts/README.md`; no Go code; nothing
-may depend on the machine running it.
+HOSTILE-CONSTRUCTION RULES: build the person the title names; real foreign ids on
+every id-taking action; exact refusal, never "any 4xx"; never catch the fixture's own
+failure; fresh sentinel subjects per fixture; garbage is refusal, never a save. A
+fixture and a fail-closed rule in conflict → the rule wins; record why.
 
-DONE WHEN: schema-valid fixtures; coverage map lists every uncovered clause explicitly;
-fixture checks green.
+HARD RULES: one invariant or protocol chain per PR with all its fixtures; contract pages unchanged
+unless the owner accepts a proposal under `prompts/README.md`; no Go except the
+schema tooling if it is Go; no manifest, catalogue, lock, or hash tooling of any
+kind; nothing may depend on the machine running it;
+every fixture PR updates the rows it satisfies in `docs/negative-matrix.md` (packet 04).
 
-REPORT: coverage counts per page; uncovered clauses; contract gaps (rows you could not
-fixture as written and why) — the most valuable output.
+DONE WHEN (per phase): schema-valid fixtures; the uncovered clauses listed in the
+last PR of the phase; profile mutation suite green; the phase merged and read.
+
+REPORT: coverage counts per page and per phase; uncovered clauses; contract gaps
+(rows you could not fixture as written and why) — the most valuable output.

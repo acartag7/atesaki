@@ -15,7 +15,7 @@ to a failure that was actually observed, not a hypothetical.
 |------|------------|
 | `atesaki.reference.yaml` | Annotated reference config — the route model by example. Every field is commented with the failure mode it prevents. Two sample routes (`/splunk`, `/conduktor`) share one IdP but keep distinct audiences and scope catalogs. |
 | `atesaki.schema.json` | JSON Schema (draft 2020-12) to seed `atesaki validate`. Strict where strictness fails closed: https-only issuer/resource, secret-refs only (inline secrets forbidden), non-`*` redirect allowlist, `credential` as a `oneOf` on `type`. |
-| `CONFORMANCE.md` | 52 test cases in 11 groups (A–K), each annotated with the failure mode it guards against. |
+| `CONFORMANCE.md` | 52 test cases in 11 groups (A–K), each annotated with the failure mode it guards against. Its `atesaki check <route>` (§I) is the predecessor of the contract's `atesaki validate --deep`; its `readyz` row is superseded by open question #61. |
 
 ## The model in one breath
 

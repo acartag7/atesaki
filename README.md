@@ -46,6 +46,7 @@ proxied egress, internal CAs, no staging environment.
 
 | File | Job |
 | --- | --- |
+| `docs/roadmap.md` | the plan, milestone by milestone: what you can do, what to test, what to build, which packet |
 | `docs/quality-bar.md` | how we work; when a rule may change |
 | `docs/contract.md` | roles, config rules, tokens, ladder, routes, relay, egress, verbs, the nevers |
 | `docs/contract-grants.md` | GrantV0: dispensing, the records and state machines, hashes, the operation table, policy, machine grants |
@@ -56,7 +57,7 @@ proxied egress, internal CAs, no staging environment.
 | `docs/open-questions.md` | only what is still open — nothing here is decided |
 | `docs/future.md` | not this version |
 | `docs/decisions.md` | the ledger — every `[O]` tag has a row saying how Arnold decided it |
-| `tools/contract-lint.py` | coverage lint: dangling refs, reasons without producers, states without operations, decisions without receipts |
+| `tools/contract-lint.py` | structural lint over the docs: dangling G/B/D/A/# references, durable reasons without a producing row, states no row produces, owner tags without a ledger receipt — it does not read packets or STATE and proves no semantic consistency |
 | `prompts/` | dispatch packets for every remaining piece of work, in execution order, with the gates between them (`prompts/README.md`) |
 
 There is no `http-api.md`: Atesaki has no website. Its HTTP surface (OAuth endpoints,
@@ -73,8 +74,10 @@ well-known documents, `/​<route>/mcp`) is part of `docs/contract.md`.
   §07 crypto/token, §09 AS-lite bridge, §10 redirect policy, §11 scopes — because those
   are the clauses the Go implementation must prove before it can claim parity.
 
-## Sequence (after freeze — not before)
+## Sequence
 
-contract → threat model → acceptance tests (corpus-driven) → freeze → implementation
-prompts handed to build sessions (`prompts/`, in order, gates stated). This repo's
-design chat writes rules, tests, and prompts only.
+contract → threat model → acceptance tests (corpus-driven) → implementation, one
+slice at a time: a slice's sections are pinned and its fixtures locked before its code
+starts (open question #55 — the single freeze is proposed to become a per-slice one).
+`docs/roadmap.md` is the order; `prompts/` holds the packets handed to build sessions.
+This repo's design chat writes rules, tests, and prompts only.

@@ -1,3 +1,12 @@
+> **OBSOLETE — evidence only, not normative.** Imported from the starter kit
+> (`PROVENANCE.md`). Several rows contradict the current contract: discovery is
+> RFC 9728 path insertion under `/.well-known/…/<route>/mcp` (B3), not
+> `/<route>/.well-known/…`; a malicious upstream reflecting its own credential in a
+> relayed body is an accepted residual, not a promise (`contract.md §6`);
+> multi-replica stores are out of v0 (`§13`); readiness excludes upstream
+> reachability (open question #61); `atesaki check` is the predecessor of
+> `validate --deep`. The contract pages win everywhere they differ.
+
 # atesaki conformance checklist
 
 Test cases for an MCP OAuth gateway, grouped by concern. Each item names the

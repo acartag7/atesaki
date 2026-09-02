@@ -6,7 +6,7 @@ where reverting a fix locally is expected and destroys nothing. Pin and report t
 exact PR head SHA reviewed.
 
 Read first, fully: the PR diff · the contract clauses **derived from the diff, call
-graph, fixture manifest, and siblings — never only what the PR description claims** ·
+graph, fixture directory, and siblings — never only what the PR description claims** ·
 the locked fixtures it claims to pass · docs/deltas.md · docs/threat-model.md ·
 docs/negative-matrix.md · prompts/README.md conventions.
 
