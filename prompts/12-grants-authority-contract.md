@@ -1,3 +1,5 @@
+STATUS 2026-09-08: the #24 authority-model ruling is recorded in decisions.md and open-questions.md. This packet owns the remaining G13/B1 contract work, audit fields and threat-model mirrors. Before implementation, present the missing durable audit operation for list/pending and authorized no-transition outcomes; the ruling does not silently add a B7 reason or G6 transaction. No packet-12 implementation is performed by the prerequisite-recording task. #62 and claim-state details remain held.
+
 MODEL: claude-opus-class or fable   EFFORT: high   TOOL: Claude Code in ~/project/atesaki-core MILESTONE: M2 (docs/roadmap.md), before packet 06 (the grants CLI ships in slice 2). PRECONDITION: Arnold has APPROVED the #24 proposal in docs/open-questions.md (or amended it, implement his words, not the proposal). Pre-freeze; before packet 07. WHY: the last open design cell with real content. The strict serial plan blocks on it.
 
 Read first: docs/open-questions.md #24 (the proposal and Arnold's ruling) · docs/contract-grants.md G7 (approvers), G13 (verbs) · docs/contract-boundaries.md B1 (Route.spec.grant.approvers), B7 · docs/decisions.md · docs/threat-model.md.

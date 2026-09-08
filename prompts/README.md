@@ -17,7 +17,7 @@ Each active packet is pasted into a **fresh session** of the named tool. Retired
                     clientOriginIn, PR-5 interpretations + header-name rule, #58, #59,
                     #55 per-slice fixtures without machinery, #60, #61, #63, #64, #65, #66, #67, B4 alg
                     wording, B8 note, matrix window
-                 12 grants authority (waits on the #24 ruling; fixtures written in 03 phase 3)
+                 12 grants authority (#24 prerequisite recorded; contract completion still outstanding)
                  03 phase 0 (fixture profile) then phase 1 (slice-1 fixtures)
                  04 threat model + negative matrix
                           │
