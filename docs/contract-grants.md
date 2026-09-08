@@ -26,7 +26,7 @@ Each record carries `state`; fields marked `?` are absent unless the state named
 
 `machine_tombstone`: `client_id`, `resource`, `declaration_digest`, `revoked_at`, `revoked_by`.
 
-Exact portable logical schemas are corpus work (D8, #36).
+Packet 02 defines these records as Go types and generates the portable logical JSON Schemas from those types. Golden checks compare committed schemas with generated output. Drift checks compare the G2 fields and their state-dependent ownership in G6 with the Go types. The schemas remain inputs to the fixture corpus (D8, #36). `[O:2026-09-08, #54]`
 
 ## G3. Hashes and digests (mechanical)
 

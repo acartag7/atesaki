@@ -30,7 +30,7 @@ Positioning: agentgateway is the gateway for companies whose IdP and network coo
 | `docs/quality-bar.md` | how we work; when a rule may change |
 | `docs/contract.md` | roles, config rules, tokens, ladder, routes, relay, egress, verbs, the nevers |
 | `docs/contract-grants.md` | GrantV0: dispensing, the records and state machines, hashes, the operation table, policy, machine grants |
-| `docs/contract-boundaries.md` | typed config schema, reference trust, canonicalization, signed-assertion rung, caps, proxy trust, error catalog |
+| `docs/contract-boundaries.md` | configuration contract and drift checks, reference trust, canonicalization, signed-assertion rung, caps, proxy trust, error catalog |
 | `docs/deltas.md` | the public list of intentional differences from the mcp-sso reference |
 | `docs/onboarding.md` | how an operator and a user join |
 | `docs/threat-model.md` | what a signed-in attacker can try (seed) |

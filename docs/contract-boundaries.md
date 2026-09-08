@@ -2,7 +2,7 @@
 
 **Status: DRAFT.** Companion to `contract.md` and `contract-grants.md`; owns the boundary rules those pages only name. Tags as in `contract.md`, plus: `[R]` = fail-closed default confirmed by Arnold 2026-08-31 (changing one is a contract change); `[P]` = proposed by the design session 2026-08-31, awaiting Arnold, not decided; `[#]` = a number in B8. Parse, don't validate: every rule below produces a typed value once at the boundary; interior code never re-checks it.
 
-**Honesty note on B1.** The table below is the reference for the configuration contract. The freeze artifact is a machine-readable schema generated from it and validated against a mutation suite (open question #36). B1 is not claimed complete until that artifact exists.
+**Configuration validation and drift checks.** B1 is the configuration contract; the Go parser is the configuration validator, including for fixture inputs. No separate configuration JSON Schema is produced. A drift test compares field paths, types, and requiredness in both directions. Undocumented parser fields fail the check at all times. Fields documented in B1 but not yet implemented are reported in a pending list; that list must be empty at the relevant slice's completion. A type or requiredness disagreement on a field both sides know is a contract gap, not permission to pick either behavior. Packet 02 implements these checks. `[O:2026-09-08, #54]`
 
 ## B1. Configuration
 

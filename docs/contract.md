@@ -128,7 +128,7 @@ Plus the store port (§13): SQLite and memory adapters in v0, a conformance suit
 
 ## 12a. Trust-boundary surfaces → `contract-boundaries.md`
 
-The configuration reference table and malformed-input rules (B1; the machine-readable schema is the freeze artifact, #36), `env:`/`file:` reference trust (B2), URL and path canonicalization and route collision (B3), the rung-4 signed-assertion contract (B4), caps (B5), forwarded-header and proxy trust (B6), and the public error catalog with audit reason codes (B7) live in `contract-boundaries.md`. Those pages are one contract; nothing there is restated here.
+The configuration reference table and malformed-input rules (B1; configuration validation and drift checks under #54), `env:`/`file:` reference trust (B2), URL and path canonicalization and route collision (B3), the rung-4 signed-assertion contract (B4), caps (B5), forwarded-header and proxy trust (B6), and the public error catalog with audit reason codes (B7) live in `contract-boundaries.md`. Those pages are one contract; nothing there is restated here.
 
 ## 13. V0 scope pin `[O:2026-08-30, restoring the SHAPE decisions]`
 

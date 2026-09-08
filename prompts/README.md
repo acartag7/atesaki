@@ -11,7 +11,7 @@ Each active packet is pasted into a **fresh session** of the named tool. Retired
  M0              13 repo hardening: CI required on main with admin bypass off, license,
                     SECURITY.md, sanitization grep, dependency cooldown, two grammar
                     fixes, name check, STATE refresh
- M1              02 config drift check + record types (RESCOPED, waits on #54)
+ M1              02 config drift check + record types (#54 ruled; downstream phase gates still apply)
  M2              14 contract closure: #62 consent-page carrier, #53 two-stage ceiling,
                     #5 live fetch, #56 knownCimd refs + config-file exception, #57
                     clientOriginIn, PR-5 interpretations + header-name rule, #58, #59,
