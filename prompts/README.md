@@ -12,7 +12,7 @@ Each active packet is pasted into a **fresh session** of the named tool. Retired
                     SECURITY.md, sanitization grep, dependency cooldown, two grammar
                     fixes, name check, STATE refresh
  M1              02 config drift check + record types (#54 ruled; downstream phase gates still apply)
- M2              14 contract closure: #62 consent-page carrier, #53 two-stage ceiling,
+ M2              14 contract closure: #62 carrier direction only, state contract held; #53 two-stage ceiling,
                     #5 live fetch, #56 knownCimd refs + config-file exception, #57
                     clientOriginIn, PR-5 interpretations + header-name rule, #58, #59,
                     #55 per-slice fixtures without machinery, #60, #61, #63, #64, #65, #66, #67, B4 alg

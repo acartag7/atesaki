@@ -2,6 +2,8 @@
 
 **Rule (`[O:2026-08-30]`).** Atesaki passes every frozen *portable* fixture in the shared corpus with zero skips. Atesaki never skips and never edits a portable fixture. A behavior Atesaki intentionally changes is listed here first; mcp-sso labels the fixtures pinning the reference-only behavior *host*; Atesaki writes its own. A behavioral difference not on this list is a bug in Atesaki.
 
+**Status 2026-09-08:** D3/D5 retain the earlier carrier/claim baseline while #62 has direction approval only. C1/C2, receipt behavior and explicit request-ID selection remain held. This is no authorization-server readiness claim. D14 is a separately ruled scope change.
+
 Tags: `[O:date]` owner decision · `[D ← rule]` derived consequence (reversing it means changing the named rule) · `[P]` proposed, awaiting Arnold.
 
 | # | Difference | Reference | Atesaki | Fixtures |
