@@ -2,6 +2,9 @@
 
 **Status: DRAFT contract. Nothing is frozen.** Product code is being built slice by slice against the contract as it stands; each PR names the sections it implements.
 
+The v0 binary supports Linux and macOS. Licensed under [MIT](LICENSE).
+See the [security policy](SECURITY.md) for supported versions and reporting.
+
 ```
 go build ./cmd/atesaki
 atesaki validate atesaki.yaml   # reads the config, the named env vars, and referenced-file metadata; writes nothing, no network

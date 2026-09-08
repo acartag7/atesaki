@@ -1,0 +1,12 @@
+/atesaki
+*.test
+/coverage.out
+/coverage.html
+/coverage/
+.DS_Store
+*.swp
+*.swo
+*~
+.env
+.env.*
+!.env.example
