@@ -1,6 +1,6 @@
 # Onboarding
 
-**Status: DRAFT.**
+**Status: DRAFT.** The user flow below is a future target. As of 2026-09-08, #62 and the pending receipt have direction approval only; C1/C2, claim-state, receipt final behavior and explicit request-ID selection remain held. A completed adjusted probe consent page did not test these stages or the next approval step. Production browser policy is a separate undecided question.
 
 ## The operator (the person who runs the front door)
 
