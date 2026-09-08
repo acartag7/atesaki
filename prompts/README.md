@@ -34,7 +34,7 @@ Each active packet is pasted into a **fresh session** of the named tool. Retired
                     (needs mcp-sso §07/§09/§10/§11 frozen, or every unfrozen id listed
                     as deferred in the PR, never skipped silently)
                     (03 phase 3 written alongside, locked before 07)
- M5              07 Go slice 3: machine clients (if #67 keeps them), sweeper,
+ M5              07 Go slice 3: sweeper,
                     retention, JSONL projection with a cursor, migrations and backup
                     →  tag contract-v0-freeze
  M6              15 rehearse: mock IdP, client profiles

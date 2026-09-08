@@ -39,7 +39,8 @@
 | `audit.path` | path | required (JSONL); B2 |
 | `health.livePath`, `health.readyPath` | path | defaults `/healthz`, `/readyz`; reserved paths |
 | `tokens.accessTtl`, `tokens.consentTtl`, `tokens.codeTtl` | duration | defaults B8; positive integer seconds |
-| `machineClients[]` | [`{id, secretRef, purpose, maxDuration, routes[{path, scopes[]}]}`] | G10; `id` grammar B3; each route path must exist; scopes ⊆ that route's catalog; `purpose` B5 shape; `maxDuration` ≤ that route's `grant.maxDuration` ≤ hard ceiling |
+
+`Gateway.spec.machineClients` is not a v0 field and is refused under B1 unknown-field handling (#67, G10). The existing parser removal is packet 02 phase 2a; this contract change does not claim that implementation is complete.
 
 **`Route.spec`**
 
@@ -78,7 +79,7 @@ One parser, one canonical form. Config values are refused if not already canonic
 - **Audience** = `externalBaseUrl` + `Route.spec.path` + `mcpEndpoint`, byte-exact.
 - **Metadata URLs (exact).** Per route, RFC 9728 path insertion: `/.well-known/oauth-protected-resource` + audience path (e.g. `/.well-known/oauth-protected-resource/playbook/mcp`). The authorization-server metadata lives at the origin: `/.well-known/oauth-authorization-server` and `/.well-known/openid-configuration` (one issuer). All are reserved; `atesaki routes` prints them; collision analysis includes them.
 - **Inbound request-target.** Parsed once. Absolute-form is accepted only when its scheme and authority byte-equal the effective authority tuple (B6); otherwise `400`, never silently discarded (two authorities in one request is a parser-differential surface). The raw path is first scanned for encoded separators (`%2F`, `%2f`, `%5C`, `%5c`); any present ⇒ not routed (the evidence is inspected before decoding destroys it). The path is then percent-decoded exactly once; if the decoded path still contains `%` (double encoding), an empty segment, or a dot segment, it is not routed (404). Matching is byte equality against canonical paths; no case folding, no trailing-slash tolerance.
-- **Identifiers** (profile names, route names, machine-client ids): `[a-z][a-z0-9-]{0,62}`.
+- **Identifiers** (profile names, route names): `[a-z][a-z0-9-]{0,62}`.
 
 ## B4. Rung 4: the signed-assertion contract (`identity.provider: header`)
 
@@ -139,7 +140,7 @@ Public responses are non-oracular: one shape for unknown, expired, revoked, and 
 | revoke (POST) | none | 200 | RFC 7009: known or unknown token both answer 200; unknown is an admitted no-op, audited `unrecognized_token` `[S:mcp-sso §9, §13]` |
 | revoke (POST) | `invalid_request` | 400 | duplicate/ambiguous form occurrences `[S:mcp-sso §9.4 occurrence gate]` |
 | callback (redirect identity, bridge completion) | `server_error` | 302 | generic completion failure `[S:mcp-sso §17.11 bridge-completion row]`; the direct `500 internal_error` belongs to the claims-only completion Atesaki does not use |
-| token | `invalid_request` / `invalid_client` / `unsupported_grant_type` / `invalid_scope` / `invalid_target` | 400/401 | inherited `[S:mcp-sso §9.4, §17.2]` |
+| token | `invalid_request` / `invalid_client` / `unsupported_grant_type` / `invalid_scope` / `invalid_target` | 400/401 | inherited `[S:mcp-sso §9.4]`; `client_credentials` is unsupported in v0 (G10) |
 | token | `invalid_grant` | 400 | unknown/expired/revoked code, family, or grant; grant not `issued`/`active`; one code for all |
 | any OAuth | `internal_error` | 500 | generic (non-OAuth) throw from a port, never mapped to a client-auth error `[S:mcp-sso §14]` |
 | any OAuth | `temporarily_unavailable` | 503 | store unreachable where the contract says fail closed |
@@ -154,10 +155,10 @@ Public responses are non-oracular: one shape for unknown, expired, revoked, and 
 **Response headers relayed from an upstream** (exact allowlist; all else dropped): `content-type`, `mcp-session-id`, `mcp-protocol-version`. `cache-control` is not relayed `[R]`.
 
 **Audit reason codes: the set for v0, closed at freeze.** A new code is a contract change; a test rejects any reason constant absent from this list, and a coverage check requires every G6 row to name only reasons from it. Class per G12: **D** durable (committed with a state transition) or **F** flow (best-effort):
-**D:** `request_allowed` · `request_denied_policy` · `request_escalated` · `request_unavailable` · `request_consented` · `request_abandoned` · `request_resolved` · `preapproval_approved` · `preapproval_denied` · `preapproval_claimed` · `preapproval_expired` · `preapproval_invalidated_stale` · `consent_denied` · `grant_issued` · `grant_activated` · `grant_expired` · `grant_revoked` · `grant_machine_issued` · `grant_machine_reused` · `grant_machine_revoked` · `token_refresh_rotated` · `token_refused_replay`.
-**F:** `boot_refused` · `config_rejected` · `secret_ref_missing` · `identity_verified` · `identity_refused` · `assertion_duplicate` · `assertion_stale_keys` · `request_deduplicated` · `decider_unavailable` · `scope_ceiling_applied` (emitted by G4 when the ceiling removes ≥1 requested scope) · `preapproval_claim_lost_race` · `response_not_delivered` · `retention_purged` · `unrecognized_token` · `token_refused_expired` · `token_refused_unknown` · `token_refused_binding` · `token_refused_tombstone` · `token_refused_deny_rule` · `token_refused_client_auth` · `token_refused_no_declaration` · `token_refused_scope` · `relay_forbidden_host` · `relay_forbidden_origin` · `relay_upstream_unavailable` · `relay_upstream_auth_failed` · `cap_exceeded` · `port_failure` · `audit_sink_failed`.
+**D:** `request_allowed` · `request_denied_policy` · `request_escalated` · `request_unavailable` · `request_consented` · `request_abandoned` · `request_resolved` · `preapproval_approved` · `preapproval_denied` · `preapproval_claimed` · `preapproval_expired` · `preapproval_invalidated_stale` · `consent_denied` · `grant_issued` · `grant_activated` · `grant_expired` · `grant_revoked` · `token_refresh_rotated` · `token_refused_replay`.
+**F:** `boot_refused` · `config_rejected` · `secret_ref_missing` · `identity_verified` · `identity_refused` · `assertion_duplicate` · `assertion_stale_keys` · `request_deduplicated` · `decider_unavailable` · `scope_ceiling_applied` (emitted by G4 when the ceiling removes ≥1 requested scope) · `preapproval_claim_lost_race` · `response_not_delivered` · `retention_purged` · `unrecognized_token` · `token_refused_expired` · `token_refused_unknown` · `token_refused_binding` · `relay_forbidden_host` · `relay_forbidden_origin` · `relay_upstream_unavailable` · `relay_upstream_auth_failed` · `cap_exceeded` · `port_failure` · `audit_sink_failed`.
 
-Free text never enters a flow event; purpose appears in exactly two durable events (`grant_issued`, `grant_machine_issued`) and nowhere else in either stream.
+Free text never enters a flow event; purpose appears in one durable event (`grant_issued`) and nowhere else in either stream.
 
 ## B8. Numbers
 

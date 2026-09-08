@@ -42,7 +42,7 @@ Ranked by what they block. Each item: what it is, what happens, what breaks if i
 6. **#63. The server has no pre-handler exhaustion envelope.** `[decide]` *What happens:* B5 bounds sizes and counts and B8 bounds authenticated streams, but nothing bounds time: no header-read timeout, no body-read deadline, no idle timeout, no connection cap, no pre-verification per-IP budget on `/mcp`. Slow headers, slow bodies, or anonymous connection churn exhaust the process before any route, identity, or subject limit runs. *Recommend (numbers for the "ok"):* header-read 10 s; body-read 60 s on non-stream requests; idle 120 s; connection cap 1 024 as a global semaphore; unauthenticated per-IP `/mcp` budget 120 per 60 s with bounded per-IP state (10 000 addresses, least-recently-seen evicted) plus a global anonymous budget so IP cardinality cannot exhaust the limiter; the TLS handshake bound lives in the pinned ingress recipe (Atesaki has no inbound TLS configuration and terminates TLS at the ingress). Blocks packet 05; real-socket slow-header and slow-body tests in M3.
 7. **#64. Durable events are not guaranteed to reach the JSONL stream.** `[decide]` *What happens:* G12 says loss is possible only for flow events, but the JSONL fan-out of `grant_event` rows is best-effort with no cursor or retry, so a durable event can be missing from the advertised combined stream. *Already solved:* G2's `grant_event.seq`. *Recommend:* the store is the durable audit of record; the JSONL projector serializes sink writes, appends and `fsync`s, **then** advances a cursor kept in the store, a crash between the two duplicates, never loses; consumers deduplicate by `event_id` (the projector does not scan JSONL); flow events stay lossy and counted. One cursor, no dispatcher framework.
 8. **#66. Hash bytes, A6b atomicity, A9′ error mapping.** `[decide]` *What happens:* `purpose_hex` has no byte, trim, or case rule; `approved_hash` names no exact member set; A6b does not say whether invalidation and the following A3/A2 are one transaction; A9′ lists two public errors without mapping each predicate. Two implementations would hash differently and refuse differently. *Recommend:* one byte-exact hash vector in G3; the approved object spelled out; A6b as one transaction; every A9′ predicate mapped to one error, with a delta for any inherited change.
-9. **#67. What stays in v0.** `[decide]` The reviewer's judgment: with one person merging and December the target, defer **machine clients** (G10, A12, A13, D10a–D10c, tombstones) to v0.1, a separate capability with its own rows and fixtures whose removal touches nothing in the human loop, and keep **rung 4** (signed proxy assertions), because "no IdP change at all" is the positioning sentence and cutting it cuts the pitch. Not docs-only: the merged validator accepts `machineClients[]`, a valid example declares one, and record types, B7 reasons, G5 states, onboarding, and rehearsal carry machine shapes, deferral is one config-boundary PR (packet 02 phase 2a) that makes the field unknown for v0 and sweeps every sibling, **before** record schemas are generated. Rule it first. The reviewer also proposed deferring the periodic sweeper and retention purge (keeping lazy expiry) and proxied live CIMD. The plan below marks machine clients as M5-if-kept. Reverses 2026-08-31 (machine clients in v0) if taken.
+9. **#67. V0 scope ruled 2026-09-08.** Machine clients defer to v0.1; signed proxy assertions remain in v0. Sweeper, retention purge and proxied CIMD are not deferred by this ruling. G10 and future.md hold the contract disposition. Packet 02 phase 2a removes existing machine configuration support before drift phase 1 and record phase 2; this contract sweep must merge first.
 10. **#61. Readiness and shutdown semantics.** `[decide]` *What happens:* B1 reserves `livePath`/`readyPath` and §14 asks the recipe to say how streams end at shutdown, but no sentence says what `readyz` checks or what `SIGTERM` does. *Recommend:* readiness per identity mode and per shipped capability, M3: store directory admissible under B2, audit sink open, signing key loaded (no database exists until M4); M4 adds database open with migration state current, and "identity JWKS fetched at boot" only for modes that fetch one (console and a static `jwksRef` never do), never upstream reachability, which is `validate --deep`'s job. `SIGTERM`: stop accepting, drain non-stream requests for a bounded time (B8), cancel every stream's context, force-close after the bound (Go's `Shutdown` alone waits forever on an open stream).
 11. **#54. Packet 02 uses the Go validator.** `[O:2026-09-08]` Ruled as proposed; receipt in `decisions.md`. Implementation remains packet 02. The ruled approach is to drop the config JSON Schema; add a mechanical B1↔parser drift test in Go, parser→B1 strict at all times (no undocumented accepted field), B1→parser reported as pending gaps that may persist while the slice's fixtures are merged ahead of its code and must be empty at slice **completion**, closed by the slice's first, fixture-driven boundary PR; write the G2 records as Go types and generate `schema/records/*.schema.json` from them with a golden test. Reverses #36's config half only.
 12. **#55. One freeze or a rolling one.** `[decide]` *Recommend:* per slice, and **no machinery** (#30, #50, #52, `quality-bar.md`: "no hash manifest or self-checking workflow decides this; review owns changes"). Before a slice's code starts, its fixtures are merged and the owner has read them, the PR approval is the record. A fixture carries only what §19 already puts in the file: `status` (`draft` until a runner passes it, then `frozen` with the `receipt` object naming implementation, version, commit, date) and the clause it pins. No lock file, no manifest, no catalogue, no hash gate: a fixture edited inside an implementation PR is a review-checkpoint finding (#52) that the diff shows. The runner runs every non-superseded fixture and reports by status; a skipped fixture is a failure (never 7). `contract-v0-freeze` is one git tag when the whole portable set is green.
@@ -75,7 +75,7 @@ M0 repo hardening ──► M1 config boundary (done + residuals)
                           │              M4 slice 2: sign-in, store, the human loop (allow, escalate,
                           │                     │        approve, claim), grants CLI, idp-request
                           └──► 03 phase 3 ──────▼
-                                         M5 slice 3: machine clients (if kept), sweeper, retention,
+                                         M5 slice 3: sweeper, retention,
                                                      audit projection, upgrade path
                                                 │
                                                 ▼
@@ -91,7 +91,7 @@ Serial inside the Atesaki lane. The two dashed inputs from mcp-sso are the only 
 | --- | --- | --- | --- | --- | --- |
 | 16 (M2 step 0) | client compatibility spike: what Codex and Claude Code actually send and accept (authorize parameters, narrowed `scope`, `approval_pending`, per-install CIMD, consent POST) | probe server from PR 4 | none | now, two days, before any M2 ruling closes | evidence recorded; #62, #53, #5 rulings informed |
 | 13 | CI, protection, license, SECURITY.md, cooldown, grammar fixes, STATE/ledger, name check | none | LICENSE; dependency floor; name check (#9) | now | CI required on `main`; red PR cannot merge |
-| 02 | B1↔parser drift test; (phase 2a: `machineClients` removed if #67 defers); G2 record types + generated record schemas; `knownCimd` refs | merged config code | #54 (phases 1–2); #67 (phase 2a, before 2); #56 (phase 3) | after 13 | parser→B1 empty always; B1→parser pending list printed, empty at each slice completion; records golden; phase 3 after packet 14 item 3 and before packet 06 PR 3 |
+| 02 | B1↔parser drift test; (phase 2a: remove `machineClients` first); G2 record types + generated record schemas; `knownCimd` refs | merged config code | #54 (phases 1–2); #67 (phase 2a, before 1 and 2); #56 (phase 3) | after 13 | parser→B1 empty always; B1→parser pending list printed, empty at each slice completion; records golden; phase 3 after packet 14 item 3 and before packet 06 PR 3 |
 | 14 | contract sentences for #62, #53, #5, #56, #57, PR-5 interpretations and header-name rule, #58, #59, #55, #60, #61, #63, #64, #65, #66, #67, B4 `alg` wording, B8 note, matrix window | rulings; packet 16 evidence | each item's ruling | any time a ruling lands | lint green; ledger receipts; fixture ids named for 03 |
 | 12 | G13 authority text, B1 approvers row, audit fields, residuals | #24 ruling | #24 | after the ruling | lint green; fixture intent named for 03 phase 3 |
 | 03 phase 0 | fixture profile + mutation suite | record schemas (02), packet 14 sentences | none | after 02 phase 2 and 14 | profile mutation suite green |
@@ -100,8 +100,8 @@ Serial inside the Atesaki lane. The two dashed inputs from mcp-sso are the only 
 | 05 | runner, egress, pipeline, verifier, relay, serve, `--deep`, health/shutdown | merged phase-1 fixtures; mcp-sso §8 fixtures `frozen` in their files | #55, #59, #61, #63 (values), JOSE library | after 04 and the §8 fixtures | phase-1 + §8 green, zero skips; review clean; real MCP named |
 | 03 phase 2 | slice-2 fixtures | profile; packet 14 | none | alongside 05; locked before 06 | locked |
 | 06 | the slice-2 configuration fields (first PR, closes the B1→parser gaps), store port + SQLite with the server lock, AS, the whole human loop (allow, escalate, approve, claim, consent, exchange, rotation, revocation), the grants CLI, identity ports, `idp-request` | merged phase-2 fixtures; packet 12; packet 02 phase 3; mcp-sso §07/09/10/11 or listed deferrals | #62, #53, #5, #24, #57, #58, #60, #64, #66 | after 05, packet 12, 02 phase 3, and the phase-2 fixtures | parity line by clause; B1→parser empty; real sign-in to approval to tool call; review clean |
-| 03 phase 3 | slice-3 fixtures (machine clients if kept, sweeper, retention, projection, upgrade) | profile | #67 | alongside 06; merged before 07 | merged and read |
-| 07 | machine clients (if kept), sweeper, retention, JSONL projection with cursor, schema migration, backup | merged phase-3 fixtures | #67, #65 | after 06 and the phase-3 fixtures | every G6 row green; `contract-v0-freeze` |
+| 03 phase 3 | slice-3 fixtures (sweeper, retention, projection, upgrade) | profile | #67 | alongside 06; merged before 07 | merged and read |
+| 07 | sweeper, retention, JSONL projection with cursor, schema migration, backup | merged phase-3 fixtures | #67, #65 | after 06 and the phase-3 fixtures | every active v0 G6 operation green; `contract-v0-freeze` |
 | 15 | `rehearse` + client profiles | runner; full AS | none | after 07 | onboarding step 4 true |
 | 08 | recipe, image, kustomize, client matrix | `idp-request` (06), profiles (15) | matrix window | after 15 | recipe run once end to end |
 | 09 | README, CHANGELOG, release workflow, sanitization in CI, listings | everything | none | after 08 | live verification named |
@@ -147,7 +147,7 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 | --- | --- |
 | `docs(contract): write the six PR-5 interpretations into B1` | contract-change PR (packet 14 item 5); one line each; owner confirms or reverses |
 | `test(config): B1 to parser drift check` | the parser registers every accepted path with its requiredness at accessor-call time; the test reads B1; both diffs printed; empty or fail |
-| `feat(records): G2 record types and generated schemas` | Go types for `grant_request`, `preapproval`, `grant`, `authorization_code` delta, `grant_event`, `machine_tombstone` with state-dependent presence encoded as typed unions; `schema/records/*.schema.json` generated by a golden test; RFC 3339 3-ms timestamps; `snake_case`; needed by 03 phase 0 |
+| `feat(records): G2 record types and generated schemas` | Go types for `grant_request`, `preapproval`, `grant`, `authorization_code` delta, `grant_event` with state-dependent presence encoded as typed unions; `schema/records/*.schema.json` generated by a golden test; RFC 3339 3-ms timestamps; `snake_case`; needed by 03 phase 0 |
 | `feat(config): knownCimd entries are references` | after packet 14 item 3 (#56); `env:`/`file:`; the B2 file rules apply to `file:`; does not block M2 |
 
 **Gates.** Done: drift diffs empty; record schemas committed and reproducible.
@@ -222,9 +222,9 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 
 ### M4: Slice 2: sign-in, the store, the human loop, `idp-request`
 
-**You can now.** Point Claude Code or Codex at `https://host/route/mcp`. It discovers the route, registers (CIMD or DCR), the user signs in with the company login (Entra, generic OIDC, a signed proxy assertion, or the loopback console), states a purpose and a duration on the consent page, and, where a route rule says `allow`, the agent gets tokens and calls a tool. Where nothing allows it, the flow ends with `approval_pending` and a request id; `atesaki grants pending` shows it, `grants approve <id>` narrows and approves, the user runs the flow again, sees the approved values, approves, and the tool call works. `grants deny`, `grants revoke`, and RFC 7009 end access within one access TTL. `atesaki idp-request` prints the ticket for the IdP team. This is the product promise for people; machines come next.
+**You can now.** Point Claude Code or Codex at `https://host/route/mcp`. It discovers the route, registers (CIMD or DCR), the user signs in with the company login (Entra, generic OIDC, a signed proxy assertion, or the loopback console), states a purpose and a duration on the consent page, and, where a route rule says `allow`, the agent gets tokens and calls a tool. Where nothing allows it, the flow ends with `approval_pending` and a request id; `atesaki grants pending` shows it, `grants approve <id>` narrows and approves, the user runs the flow again, sees the approved values, approves, and the tool call works. `grants deny`, `grants revoke`, and RFC 7009 end access within one access TTL. `atesaki idp-request` prints the ticket for the IdP team. This is the product promise for people; machine clients are deferred to v0.1.
 
-*Why this shape:* under the default policy everything escalates, so a slice without approvals ends every default flow in a dead end and proves nothing about the loop onboarding sells. The store, the two-phase discipline (G8), the conformance suite, and the whole interactive operation table land here on rows with humans in them; M5 adds the rows with machines and clocks in them.
+*Why this shape:* under the default policy everything escalates, so a slice without approvals ends every default flow in a dead end and proves nothing about the loop onboarding sells. The store, the two-phase discipline (G8), the conformance suite, and the whole interactive operation table land here on rows with humans in them; M5 adds the sweeper, retention and upgrade work.
 
 **Security first.**
 
@@ -283,13 +283,12 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 
 **Decisions.** #62, #53, #5, #24, #57, #58, #60, #64, #66.
 
-### M5: Slice 3: machines, clocks, and the upgrade path
+### M5: Slice 3: clocks and the upgrade path
 
-**You can now.** Unattended agents, if #67 keeps them in v0, are declared as machine clients and get bounded, revocable, tombstone-guarded tokens; expiry fires on time without waiting for a request; terminal rows purge; the store has a schema version, a migration path, a backup command, and a documented hard key rotation.
+**You can now.** Machine clients are deferred to v0.1. Expiry fires on time without waiting for a request; terminal rows purge; the store has a schema version, a migration path, a backup command, and a documented hard key rotation.
 
 **Security first.**
 
-- *Machine issuance* (if kept): requested ⊆ declared; deny-only rules; tombstone on the per-route digest; one active grant per (client, resource) with the losing insert discarding its signed token and retrying once as reuse (A12).
 - *Sweeper and lazy expiry:* exactly one event per expiry, inside the operation's own transaction; retention purge idempotent (A15).
 - *Upgrade* (#65): forward-only migrations in one transaction, downgrade refused, backup via SQLite's online backup, restore tested; key rotation = replace, restart, every credential dies, true only because grants, refresh families, and codes carry the credential epoch (the key fingerprint) that rotation and restore advance and a mismatch refuses; a pre-rotation code or refresh token is proven unable to mint under the new key.
 
@@ -297,21 +296,20 @@ Local, not a PR: delete the three merged branches; remove the dead `probe-a`/`pr
 
 | Kind | What |
 | --- | --- |
-| Atesaki fixtures (03 phase 3) | A12, A13, A14 sweeper, A15; the machine first-issuance race; the migration and downgrade-refusal `boot` fixtures; every durable reason produced by at least one fixture; every G5 state reached |
+| Atesaki fixtures (03 phase 3) | A14 sweeper, A15; the migration and downgrade-refusal `boot` fixtures; every durable reason produced by at least one fixture; every G5 state reached |
 | Store conformance | the remaining rows on both adapters |
-| Crash | failpoints around A12; a crash mid-migration leaves the old schema intact |
-| Real input | a machine client via `client_credentials` on a route with a deny rule (if kept); a restore from backup on a real cluster; an upgrade of a real schema-v1 database created by the pinned M4 commit's binary (archived with its checksum as the upgrade fixture, no earlier release tag exists) |
+| Crash | a crash mid-migration leaves the old schema intact |
+| Real input | a restore from backup on a real cluster; an upgrade of a real schema-v1 database created by the pinned M4 commit's binary (archived with its checksum as the upgrade fixture, no earlier release tag exists) |
 
 **Implement** (packet 07, rescoped):
 
 | PR | Content |
 | --- | --- |
-| `feat(grants): machine clients A12, A13` (if kept) | D10a–D10c, tombstones |
 | `feat(grants): sweeper and retention A14, A15` | 60 s interval over every row kind (the lazy path exists since M4), idempotent purge |
 | `feat(store): migrations, backup, restore` | #65 |
-| `test(e2e): machine client and upgrade` | the named real input |
+| `test(e2e): upgrade and restore` | the named real input |
 
-**Gates.** Start: M4 done; 03 phase 3 fixtures merged and read; #67 and #65 ruled. Done: parity line green on the whole portable set; every G6 row has a green fixture; `contract-v0-freeze` tag applied (#55).
+**Gates.** Start: M4 done; 03 phase 3 fixtures merged and read; #67 and #65 ruled. Done: parity line green on the whole portable set; every active v0 G6 operation has a green fixture; `contract-v0-freeze` tag applied (#55).
 
 **Decisions.** #67, #65.
 

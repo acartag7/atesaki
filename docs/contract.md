@@ -42,7 +42,7 @@ Rules:
 
 ### 3.1 Grants → `contract-grants.md`
 
-Everything about dispensing lives in `contract-grants.md`: what a grant is (G1), the records (G2), hashes and digests (G3), the flow and its parameter carriers (G4 = delta D5), states (G5), the operation table (G6), policy (G7), signing and commit discipline (G8), expiry propagation (G9), machine grants (G10), pending-state bounds (G11), audit durability classes (G12), verbs (G13), public outcomes (G14). One rule, one place; nothing there is restated here.
+Everything about dispensing lives in `contract-grants.md`: what a grant is (G1), the records (G2), hashes and digests (G3), the flow and its parameter carriers (G4 = delta D5), states (G5), the operation table (G6), policy (G7), signing and commit discipline (G8), expiry propagation (G9), machine-client deferral (G10), pending-state bounds (G11), audit durability classes (G12), verbs (G13), public outcomes (G14). One rule, one place; nothing there is restated here.
 
 ## 4. The ladder of constrained modes
 
@@ -124,7 +124,7 @@ Plus the store port (§13): SQLite and memory adapters in v0, a conformance suit
 6. **Never auto-degrade rungs.** Test: a dedicated-rung config whose IdP app rejects the redirect. The gateway must surface the IdP error, not fall back to another rung; any successful login is failure.
 7. **Never skip a frozen fixture.** Test: the corpus runner reports a skip; CI fails.
 8. **Never dispense without a purpose and an expiry.** An acceptance matrix, not one test. Purpose absent, empty, whitespace-only, control characters, over cap, wrong type; duration absent, zero, negative, fractional, overflow, over the route maximum. Each is refused at the request step; a completed grant is failure. Boundary: code exchange refuses when the code TTL has elapsed or the grant is revoked (expiry starts at activation, `contract-grants.md` G9 `[O:2026-08-31]`). The exchange also refuses a code whose PKCE, client, or redirect binding fails, consuming it, and refuses without consuming on wrong `resource` (D6). At exactly `grant_expires_at`, rotation refuses and relay verification rejects the token. Caps: every access token's `exp` ≤ `grant_expires_at`; every refresh successor's expiry ≤ `grant_expires_at`, asserted on the real minted tokens, so the test never has to assume a token that outlives its grant exists. Races: a rotation whose commit happens after expiry or revocation is refused inside the atomic mutation. The public refusal is the non-oracular `invalid_grant`; the exact reason lives in audit.
-9. **Never stamp a scope nothing granted.** Interactive: a minted token's scopes are always a subset of (route catalog ∩ the subject's group ceiling ∩ the signed consent decision). Machine: a subset of (declared scopes ∩ requested scopes), with no consent or ceiling axis, a separate matrix (mutants: scope outside the declaration; scope outside the request). Three independent mutants, each asserted on the real JWT `scope` claim: a scope absent from the catalog; a scope inside the catalog but outside the ceiling; a scope inside both but not in what the user approved. Plus lineage: a second grant by the same subject and client must not inherit the first grant's scopes (deltas.md D2). This is the playbook anti-pattern, a scope stamped into a JWT that no authority granted.
+9. **Never stamp a scope nothing granted.** Interactive: a minted token's scopes are always a subset of (route catalog ∩ the subject's group ceiling ∩ the signed consent decision). Three independent mutants, each asserted on the real JWT `scope` claim: a scope absent from the catalog; a scope inside the catalog but outside the ceiling; a scope inside both but not in what the user approved. Plus lineage: a second grant by the same subject and client must not inherit the first grant's scopes (deltas.md D2). This is the playbook anti-pattern, a scope stamped into a JWT that no authority granted.
 
 ## 12a. Trust-boundary surfaces → `contract-boundaries.md`
 
@@ -137,12 +137,12 @@ In v0:
 - Identity: Entra, generic OIDC, header mode with signed assertions only (rung 4, `§4`), and console pairing, loopback only `[O:2026-08-31]`. Console pairing is the one-machine tutorial identity: the server prints a one-time code, the person pastes it in a browser and becomes the fixed `console-operator` subject; boot refuses any non-loopback `externalBaseUrl`, issuer, or listen address before writing state; in console mode, and only there, `externalBaseUrl` may be `http://` on loopback `[O:2026-08-31]`; it boots with a loud "tutorial, never multi-user" warning `[S:mcp-sso console-pairing]`.
 - Registration: CIMD (vendored) plus DCR plus loopback redirects; stateless DCR only.
 - Credentials: `none` and `static-header`.
-- Grants: `contract-grants.md` G1–G14 in full, including operator-declared machine clients (G10) `[O:2026-08-31]`.
+- Grants: `contract-grants.md` interactive grant contract. Machine clients are deferred to v0.1; G10 and A12/A13 retain deferral pointers only `[O:2026-09-08, #67]`. Sweeper and retention remain in v0; this ruling makes no proxied-CIMD decision.
 - Store: a store port `[O:2026-08-31]`, a Go interface plus a conformance suite every adapter must pass, so another database can be adopted later without touching the core. v0 adapters: pure-Go SQLite (default, one file) and memory (passes the same suite; accepted by `rehearse`, refused by `serve`).
 - Egress profiles; all six verbs; audit JSONL.
 - Ship artifacts: one container image and one worked kustomize example (ingress from `atesaki routes`, NetworkPolicy derivable from documented egress ports `[K:§K]`).
 
-Not in v0: everything in `future.md`, human-in-the-loop approval for machine clients, multi-replica stores.
+Not in v0: everything in `future.md`, machine clients and their human-in-the-loop approval, multi-replica stores.
 
 ## 14. Deployment recipe obligations `[E:R10]`
 
