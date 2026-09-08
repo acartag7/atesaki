@@ -57,7 +57,7 @@ Ranked by what they block. Each item: what it is, what happens, what breaks if i
 21. **LICENSE.** mcp-sso is MIT; Apache-2.0 adds an explicit patent grant and notice requirements. Owner's choice; the plan carries either. `[decide]`
 22. **Name check now** (open question #9). The repo is public and the module path is in `go.mod`; run the check in M0 as its own dispatch. `[decide]`
 
-One wording fix rides with packet 14: B4 says `alg` is "never read from the token"; the executable rule is "the token's `alg` must equal the configured one and match the key's type, and the allowed set never comes from the token".
+Packet 14 item 13's mechanical wording correction is recorded in `decisions.md` on 2026-09-08. B4 owns the algorithm comparison rule.
 
 ## 3. Milestones
 
