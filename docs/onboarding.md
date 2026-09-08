@@ -13,7 +13,7 @@
 6. **The proof step.** One real sign-in against the real IdP, from one real client. Only this proves the ticket landed as asked. Do it before announcing the route.
 7. Add backend N+1 by adding a `Route` block. No new hostname, no new IdP ticket.
 8. Decide per route what may auto-approve and what is refused outright; everything else waits for a human. `atesaki grants pending` shows requests waiting. Use `grants approve <id>` (you may shorten the duration or drop scopes, never add) or `grants deny <id>`. The requester then runs their flow again, sees the values you approved on their consent page, approves them, and it completes.
-9. Unattended agents (cron, CI, a server-side agent) do not get a browser flow. Declare them as machine clients in the config: which routes, which scopes, why, and for how long at most. Their access is a grant like any other, listed, bounded, and revocable.
+9. Machine clients are deferred to v0.1 (#67, `future.md`). Signed proxy assertions remain a supported v0 identity mode; they do not imply machine-client grants.
 
 If the IdP ticket is impossible, pick a rung (`docs/contract.md §4`) explicitly. The degraded modes are supported and named. The product never picks one for you.
 

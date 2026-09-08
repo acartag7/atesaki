@@ -29,7 +29,7 @@ Positioning: agentgateway is the gateway for companies whose IdP and network coo
 | `docs/roadmap.md` | the plan, milestone by milestone: what you can do, what to test, what to build, which packet |
 | `docs/quality-bar.md` | how we work; when a rule may change |
 | `docs/contract.md` | roles, config rules, tokens, ladder, routes, relay, egress, verbs, the nevers |
-| `docs/contract-grants.md` | GrantV0: dispensing, the records and state machines, hashes, the operation table, policy, machine grants |
+| `docs/contract-grants.md` | GrantV0: dispensing, the records and state machines, hashes, the operation table, policy, machine-client deferral |
 | `docs/contract-boundaries.md` | configuration contract and drift checks, reference trust, canonicalization, signed-assertion rung, caps, proxy trust, error catalog |
 | `docs/deltas.md` | the public list of intentional differences from the mcp-sso reference |
 | `docs/onboarding.md` | how an operator and a user join |
@@ -51,3 +51,5 @@ There is no `http-api.md` because Atesaki has no website. Its HTTP surface (OAut
 ## Sequence
 
 contract → threat model → acceptance tests (corpus-driven) → implementation, one slice at a time. A slice's sections are pinned and its fixtures merged and read before its code starts (open question #55 proposes this per-slice form in place of the single freeze). `docs/roadmap.md` is the order; `prompts/` holds the packets handed to build sessions. This repo's design chat writes rules, tests, and prompts only.
+
+V0 scope ruling 2026-09-08: machine clients are deferred to v0.1. Signed proxy assertions remain in v0. The configuration implementation still needs packet 02 phase 2a; see `docs/contract-grants.md` G10. Sweeper, retention and proxied CIMD were not deferred by this ruling.

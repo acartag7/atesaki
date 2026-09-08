@@ -4,7 +4,7 @@
 
 ## Assets
 
-Upstream credentials · the token-signing key · minted tokens (access, refresh, codes, consent tokens) · grants, grant requests, pre-approvals, and their hashes · the policy rules and their version · the store file (grant authority survives restart there) · the audit event rows and JSONL · the IdP client secret · assertion verification keys (JWKS) and signed assertions (rung 4) · machine-client secrets.
+Upstream credentials · the token-signing key · minted tokens (access, refresh, codes, consent tokens) · grants, grant requests, pre-approvals, and their hashes · the policy rules and their version · the store file (grant authority survives restart there) · the audit event rows and JSONL · the IdP client secret · assertion verification keys (JWKS) and signed assertions (rung 4).
 
 ## Attackers and what they try
 
@@ -34,8 +34,7 @@ Upstream credentials · the token-signing key · minted tokens (access, refresh,
 | Local attacker with filesystem access | Swaps the store or audit file for a symlink or a foreign file between restarts | every open re-checks `O_NOFOLLOW`, regular file, link count 1, owner, mode, parent directory (B2) |
 | Anyone who can read the console pairing code | Becomes `console-operator` | console mode boots only on loopback; loud never-multi-user warning (`contract.md §13`) |
 | Network position inside the cluster | Reaches the authless backend directly | the product cannot enforce this; recipe obligation (§14) + `validate --deep` warning; see Known-accepted |
-| Operator mistake | Inline secret, empty allowlist, duplicate audience, wrong proxy, non-canonical URL, a machine declaration its own route's rules deny | boot refusals (`§2`, B1–B3, G7 contradiction check), deep readiness (`§9`) |
-| Machine whose binding was revoked | Asks again after any restart or after the operator edits an unrelated route | tombstone bound to the per-(client, route) declaration digest; only a deliberate change to that binding clears it (G3, G10) |
+| Operator mistake | Inline secret, empty allowlist, duplicate audience, wrong proxy, non-canonical URL | boot refusals (`§2`, B1–B3), deep readiness (`§9`) |
 | Client omitting `resource` | Hopes the gateway picks a route for it | `invalid_target`; no default resource in a multi-route gateway (G1, D13) |
 | Whoever reads config, logs, or audit | Harvests credentials | references-only config; the credential appears in nothing Atesaki authors (`§2`, `§6`, `§10`) |
 
@@ -51,3 +50,5 @@ The authorization-server surface (authorize, token, register, consent, metadata)
 - A stolen rung-4 assertion is valid until its `exp`; no replay cache in v0 `[O:2026-08-31]`.
 - Issued access tokens survive revocation for at most one access TTL. `[O:2026-08-30]`
 - Store growth is rate-bound, not size-bound. Terminal rows purge after retention, but `grant_event` rows never purge in v0 and denied or abandoned rows accrue until retention, so sustained authorized traffic grows the store at whatever rate the per-IP budgets allow. Disk exhaustion is a named residual; the levers are budgets, retention, and monitoring.
+
+Machine-client secrets, declaration contradictions and sticky revocation threats are deferred with their contract in `future.md` (#67); they are not v0 guarantees.
