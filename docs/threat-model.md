@@ -11,6 +11,7 @@ Upstream credentials · the token-signing key · minted tokens (access, refresh,
 | Who | Tries | Held by |
 | --- | --- | --- |
 | Signed-in user without the required group | Requests high scopes, calls tools anyway | group ceiling at consent + scope check per request (`contract.md §3`) |
+| Client requesting the union of several route catalogs | Requests scopes belonging to another route | Catalog narrowing then the unchanged group ceiling; separate empty-result refusals; actual granted scopes returned, raw request retained (contract.md §3, G4, D14) |
 | Agent (or user) with a plausible-sounding purpose | Lies in the purpose field | purpose is evidence, never authority; enforcement is expiry, ceiling, policy, revocation (G1, G7) |
 | Holder of a stolen refresh token | Rotates forever, or replays a consumed one | family and grant both revoked on replay or client mismatch (A10′); family expiry ≤ grant expiry; rotation re-checks grant status inside the mutation (G6 A10, G9) |
 | Holder of a stolen access token after revocation | Keeps calling tools | until that token's `exp`, at most one access TTL, the stated bounded promise (G1); the operator's lever is a shorter TTL |
