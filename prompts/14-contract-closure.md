@@ -15,7 +15,7 @@ ITEMS: one PR each, in this order, each done when lint is green, the ledger row 
    - contract.md §3: two stages, first the route catalog (a requested scope outside it is removed, `scope_ceiling_applied`, an empty result → `invalid_scope`), then the inherited group ceiling unchanged (mcp-sso §17.4: an empty result → `access_denied`). Two refusals stay two refusals.
    - contract-grants.md G4 G-b: `scope_ceiling_applied` fires when either stage removed ≥1 scope; `requested_scopes_raw` unchanged (the hash input).
    - The token response carries the narrowed `scope` (RFC 6749 §5.1); the consent page shows the narrowed set.
-   - deltas.md: a new row (reference: catalog refusal at §9.3 step 3 → host; Atesaki: narrowing) with its fixtures column; the group-ceiling outcome is not a delta.
+   - deltas.md: a new row (reference: mixed-catalog whole-request refusal at §9.3 step 3 → host; Atesaki: narrowing; matching empty-catalog refusal stays portable) with its fixtures column; the group-ceiling outcome is not a delta.
    - threat-model.md: the row "client requests the union" with the held-by rule.
    - Note for packet 10: which mcp-sso fixtures become host.
    - If the ruling is the fallback (omit `scopes_supported`), write that instead and record the re-probe as a packet-06 verification step.

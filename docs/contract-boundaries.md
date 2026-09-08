@@ -129,9 +129,9 @@ Public responses are non-oracular: one shape for unknown, expired, revoked, and 
 | authorize · direct | `access_denied` | 401 | no resolved subject (missing/invalid assertion, denied identity) |
 | authorize · direct | `invalid_request` | 400 | ambiguous/malformed pre-validation parameters |
 | authorize · direct | `invalid_client` / `invalid_redirect_uri` | 400 | inherited `[S:mcp-sso §9.3 step 2, §10]` |
-| authorize · redirect | `unsupported_response_type` / `invalid_target` / `invalid_scope` | 302 | inherited `[S:mcp-sso §9.3 step 3]`; every redirect-channel row below is `302` |
+| authorize · redirect | `unsupported_response_type` / `invalid_target` / `invalid_scope` | 302 | inherited syntax/bounds checks `[S:mcp-sso §9.3 step 3]`; catalog narrowing with empty result is `invalid_scope` (contract.md §3, D14); every redirect-channel row below is `302` |
 | authorize · redirect | `invalid_request` | 302 | malformed purpose/duration (G4 G-a); duplicate or carrier-conflicting parameters |
-| authorize · redirect | `access_denied` | 302 | user denial; policy `deny`; escalation: `error_description=approval_pending` + extension parameter `request_id` |
+| authorize · redirect | `access_denied` | 302 | empty group-ceiling result (inherited §17.4); user denial; policy `deny`; escalation: `error_description=approval_pending` + extension parameter `request_id` |
 | authorize · redirect | `temporarily_unavailable` | 302 | decider unreachable `[O:2026-08-31]` |
 | authorize · redirect | `temporarily_unavailable` | 302 | any pending cap hit, per-tuple non-duplicate or total (A3″, G11) `[D ← O:2026-08-31 total-cap outcome]` |
 | authorize · direct/redirect | `invalid_target` | 400 / 302 | `resource` omitted or not a route audience (G1, D13) |
@@ -156,7 +156,7 @@ Public responses are non-oracular: one shape for unknown, expired, revoked, and 
 
 **Audit reason codes: the set for v0, closed at freeze.** A new code is a contract change; a test rejects any reason constant absent from this list, and a coverage check requires every G6 row to name only reasons from it. Class per G12: **D** durable (committed with a state transition) or **F** flow (best-effort):
 **D:** `request_allowed` · `request_denied_policy` · `request_escalated` · `request_unavailable` · `request_consented` · `request_abandoned` · `request_resolved` · `preapproval_approved` · `preapproval_denied` · `preapproval_claimed` · `preapproval_expired` · `preapproval_invalidated_stale` · `consent_denied` · `grant_issued` · `grant_activated` · `grant_expired` · `grant_revoked` · `token_refresh_rotated` · `token_refused_replay`.
-**F:** `boot_refused` · `config_rejected` · `secret_ref_missing` · `identity_verified` · `identity_refused` · `assertion_duplicate` · `assertion_stale_keys` · `request_deduplicated` · `decider_unavailable` · `scope_ceiling_applied` (emitted by G4 when the ceiling removes ≥1 requested scope) · `preapproval_claim_lost_race` · `response_not_delivered` · `retention_purged` · `unrecognized_token` · `token_refused_expired` · `token_refused_unknown` · `token_refused_binding` · `relay_forbidden_host` · `relay_forbidden_origin` · `relay_upstream_unavailable` · `relay_upstream_auth_failed` · `cap_exceeded` · `port_failure` · `audit_sink_failed`.
+**F:** `boot_refused` · `config_rejected` · `secret_ref_missing` · `identity_verified` · `identity_refused` · `assertion_duplicate` · `assertion_stale_keys` · `request_deduplicated` · `decider_unavailable` · `scope_ceiling_applied` (G4 G-b, for requests reaching that step after both narrowing stages and G-a; catalog or group narrowing removed ≥1 scope) · `preapproval_claim_lost_race` · `response_not_delivered` · `retention_purged` · `unrecognized_token` · `token_refused_expired` · `token_refused_unknown` · `token_refused_binding` · `relay_forbidden_host` · `relay_forbidden_origin` · `relay_upstream_unavailable` · `relay_upstream_auth_failed` · `cap_exceeded` · `port_failure` · `audit_sink_failed`.
 
 Free text never enters a flow event; purpose appears in one durable event (`grant_issued`) and nowhere else in either stream.
 
